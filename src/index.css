@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* @import "/styles/admin-email-settings.overrides.css"; */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* REMOVED: global border on every element (caused thin hairline on mobile)
+   Original line: * { @apply border-border; }
+   If you need borders, apply them to specific components only.
+*/
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 23% 95%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-accent-foreground: 215 25% 27%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    --sidebar-background: 215 28% 17%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 27%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 25% 27%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  /* removed global border rule */
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    height: 100%;
+    margin: 0;
+    background: #000;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans dark:bg-background dark:text-foreground;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  pre, code {
+    @apply font-mono;
+  }
+}
+
+.markdown-editor {
+  @apply font-mono text-base leading-relaxed;
+}
+
+.markdown-preview {
+  @apply prose max-w-none prose-blue dark:prose-invert;
+}
+
+.markdown-preview pre {
+  @apply bg-secondary p-4 rounded-md overflow-x-auto;
+}
+
+.markdown-preview code {
+  @apply text-sm font-mono text-primary;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  @apply font-sans font-semibold text-foreground;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  @apply my-4 ml-6;
+}
+.markdown-preview ol {
+  @apply my-4 ml-6;
+}
+
+/* Mobile-first responsive layout utilities */
+@layer utilities {
+  .responsive-container {
+    @apply w-full px-4 mx-auto;
+    @apply sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20;
+    @apply max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-full;
+  }
+  
+  .responsive-grid {
+    @apply grid grid-cols-1 gap-4;
+    @apply sm:grid-cols-2 sm:gap-6;
+    @apply md:grid-cols-2 md:gap-6;
+    @apply lg:grid-cols-3 lg:gap-8;
+    @apply xl:grid-cols-4 xl:gap-8;
+    @apply 2xl:grid-cols-5 2xl:gap-10;
+  }
+  
+  .responsive-text {
+    @apply text-sm sm:text-base md:text-lg lg:text-xl;
+  }
+  
+  .responsive-heading {
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl;
+  }
+  
+  .responsive-button {
+    @apply px-3 py-2 text-sm;
+    @apply sm:px-4 sm:py-2 sm:text-base;
+    @apply md:px-6 md:py-3 md:text-base;
+    @apply lg:px-8 lg:py-3 lg:text-lg;
+  }
+  
+  .mobile-stack {
+    @apply flex flex-col space-y-4;
+    @apply sm:flex-row sm:space-y-0 sm:space-x-4;
+  }
+}
+
+/* Admin Email Settings Desktop Layout */
+.admin-desktop-only .email-settings-page .cards-container {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px !important;
+  align-items: start;
+}
+
+@media (max-width: 1023px) {
+  .admin-desktop-only .email-settings-page .cards-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 640px) {
+  .admin-desktop-only .email-settings-page .cards-container {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* === SUBSCRIPTION PAYWALL: force-disable hover underline / blue line under title === */
+.subscription-paywall,
+.subscription-paywall * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* kill any hover/focus underline / border / shadow inside the paywall */
+.subscription-paywall *:hover,
+.subscription-paywall *:focus,
+.subscription-paywall *:focus-visible {
+  text-decoration: none !important;
+  text-decoration-color: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* headings in the paywall (CardTitle renders as an h3) */
+.subscription-paywall h1,
+.subscription-paywall h2,
+.subscription-paywall h3,
+.subscription-paywall h4,
+.subscription-paywall h5,
+.subscription-paywall h6,
+.subscription-paywall h1:hover,
+.subscription-paywall h2:hover,
+.subscription-paywall h3:hover,
+.subscription-paywall h4:hover,
+.subscription-paywall h5:hover,
+.subscription-paywall h6:hover {
+  text-decoration: none !important;
+  text-decoration-color: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* remove any pseudo-element lines (::before / ::after) inside this modal */
+.subscription-paywall *::before,
+.subscription-paywall *::after {
+  content: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Stabilise main scroll container in PWA to avoid flicker lines */
+#dd-main-scroll {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

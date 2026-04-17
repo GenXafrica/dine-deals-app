@@ -1,0 +1,39 @@
+/* Root element should fill the screen with no extra padding */
+#root {
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
+/* Optional legacy logo styles (kept just in case something still uses them) */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em rgba(20, 184, 166, 0.6));
+}
+
+/* ---- Chrome top hairline / seam fix ---- */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;   /* match app background */
+  height: 100%;
+}
+
+#root,
+.app,
+.App {
+  min-height: 100%;
+  background: #fff;
+}
+
+/* Prevent overscroll revealing a page edge */
+body {
+  overscroll-behavior: none;
+}
