@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /
+
+# Allow email verification route explicitly
+RewriteRule ^verify-email$ /index.html [L]
+
+# SPA fallback
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule . /index.html [L]

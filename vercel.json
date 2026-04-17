@@ -1,0 +1,22 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "routes": [
+    {
+      "src": "^/manifest.json$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": "(?i)^https?://app\\.dinedeals\\.co\\.za/admin.*"
+        }
+      ],
+      "dest": "/manifest-admin.json"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

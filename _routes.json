@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "routes": [
+    { "pattern": "/assets/*", "serve": "assets" },
+    { "pattern": "/(.*)", "serve": "index.html" }
+  ]
+}
