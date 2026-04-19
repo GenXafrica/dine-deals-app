@@ -1,0 +1,178 @@
+[
+  {
+    "path": "src/components/AdminDashboard.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/NewLoginPage.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/CustomerRoute.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/ProtectedCustomerRoute.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/AuthPopup.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/pages/dashboard.tsx",
+    "reason": "not-in-router"
+  },
+  {
+    "path": "src/components/AdminLogin.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/AdminLoginModal.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/AuthRecoveryHelper.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/AuthService.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/BackButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/ChangePasswordForm.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/CustomerDashboard.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/CustomerProfileRoute.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/CustomerProfileView.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/CustomerRegisterForm.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/DatabaseSecurityFix.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/DummyMerchantCleaner.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/DummyMerchantManager.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailConfirmationNotice.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailConfirmationService.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailDeliveryDiagnostic.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailStatusChecker.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailTroubleshootingHelp.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/EmailVerificationNotice.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/HomeButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/IOSInstallBanner.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/InstallPrompt.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/LoginForm.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/MerchantRegisterForm.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/MobilePWAToast.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/NavigationButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/RefreshButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/ResendEmailsButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SMTPConfigurationFix.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SMTPDiagnosticPanel.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SMTPManualTestGuide.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SMTPPasswordConfig.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SMTPTestPanel.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SessionManager.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/SimpleInstallButton.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/TestEmailInput.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/WelcomeEmailService.tsx",
+    "reason": "no-imports"
+  },
+  {
+    "path": "src/components/WelcomeEmailSettings.tsx",
+    "reason": "no-imports"
+  }
+]

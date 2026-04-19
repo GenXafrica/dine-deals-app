@@ -1,5 +1,5 @@
 // src/components/DealThumbnailUpload.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
@@ -11,18 +11,25 @@ interface DealThumbnailUploadProps {
   images: string[];
   onImagesChange: (images: string[]) => void;
   label?: string;
+  maxMedia?: number;
 }
 
 const PLACEHOLDER_IMAGE =
   'https://d64gsuwffb70l.cloudfront.net/683946324043f54d19950def_1749044351325_dffa81dd.jpg';
 
-const normalizeImages = (arr?: string[] | null) => {
-  const base = Array.isArray(arr) ? arr.slice(0, 3) : [];
-  while (base.length < 3) base.push('');
+const clampMediaLimit = (value?: number) => {
+  if (value === 5 || value === 7) return value;
+  return 3;
+};
+
+const normalizeImages = (arr?: string[] | null, maxMedia = 3) => {
+  const limit = clampMediaLimit(maxMedia);
+  const base = Array.isArray(arr) ? arr.slice(0, limit) : [];
+  while (base.length < limit) base.push('');
   return base;
 };
 
-// NEW limits (requested)
+// Existing limits remain unchanged
 const MAX_IMAGE_KB = 300; // 300 KB
 const MAX_IMAGE_BYTES = MAX_IMAGE_KB * 1024;
 const MAX_IMAGE_DIM = 1080; // px (square)
@@ -34,7 +41,6 @@ const MAX_VIDEO_WIDTH = 1080; // px
 const MAX_VIDEO_HEIGHT = 1920; // px
 const MAX_VIDEO_DURATION = 60; // seconds
 
-// helpers
 const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -81,23 +87,15 @@ const encodeCanvasToJpeg = (canvas: HTMLCanvasElement, quality: number): Promise
     );
   });
 
-/**
- * Process image:
- * - center-crop square
- * - resize to <= MAX_IMAGE_DIM (never upscale)
- * - compress to JPEG and attempt to get <= MAX_IMAGE_BYTES
- */
 const processImageToJpeg = async (file: File): Promise<{ blob: Blob; width: number; height: number }> => {
   const img = await readImage(file);
-  let srcW = img.naturalWidth;
-  let srcH = img.naturalHeight;
+  const srcW = img.naturalWidth;
+  const srcH = img.naturalHeight;
 
-  // center crop to square
   const cropSize = Math.min(srcW, srcH);
   const sx = Math.floor((srcW - cropSize) / 2);
   const sy = Math.floor((srcH - cropSize) / 2);
 
-  // output size: clamp to MAX_IMAGE_DIM but don't upscale
   let outSize = Math.min(MAX_IMAGE_DIM, cropSize);
 
   const canvas = document.createElement('canvas');
@@ -120,10 +118,8 @@ const processImageToJpeg = async (file: File): Promise<{ blob: Blob; width: numb
     return { blob, size, quality };
   };
 
-  // try with outSize first
   let { blob } = await tryCompress(outSize, 0.85);
 
-  // if still too big, reduce dimensions gradually
   while (blob.size > MAX_IMAGE_BYTES && outSize > 720) {
     outSize = Math.round(outSize * 0.9);
     const res = await tryCompress(outSize, 0.8);
@@ -137,7 +133,6 @@ const processImageToJpeg = async (file: File): Promise<{ blob: Blob; width: numb
   return { blob, width: outSize, height: outSize };
 };
 
-// Video metadata reader
 const getVideoMetadata = (file: File): Promise<{ width: number; height: number; duration: number }> =>
   new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -164,7 +159,7 @@ const getVideoMetadata = (file: File): Promise<{ width: number; height: number; 
     const onLoaded = () => {
       const width = video.videoWidth || 0;
       const height = video.videoHeight || 0;
-      const duration = isFinite(video.duration) ? video.duration : 0;
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
       cleanup();
       resolve({ width, height, duration });
     };
@@ -173,13 +168,12 @@ const getVideoMetadata = (file: File): Promise<{ width: number; height: number; 
     video.addEventListener('error', onError);
   });
 
-// extract a single centered frame from a video file and return a JPEG Blob sized `size` x `size`
 const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
 
-    let cleanup = () => {
+    const cleanup = () => {
       try {
         URL.revokeObjectURL(url);
       } catch {}
@@ -191,7 +185,7 @@ const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
     video.playsInline = true;
     video.crossOrigin = 'anonymous';
 
-    const onError = (e: any) => {
+    const onError = () => {
       cleanup();
       reject(new Error('Failed to load video for poster extraction'));
     };
@@ -199,7 +193,7 @@ const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
     video.addEventListener('error', onError);
 
     video.addEventListener('loadedmetadata', () => {
-      const duration = isFinite(video.duration) ? Math.max(0.01, video.duration) : 1;
+      const duration = Number.isFinite(video.duration) ? Math.max(0.01, video.duration) : 1;
       const seekTo = Math.min(1, duration / 2);
 
       const handleSeeked = () => {
@@ -222,7 +216,7 @@ const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
           ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
           canvas.toBlob(
-            blob => {
+            (blob) => {
               cleanup();
               if (blob) resolve(blob);
               else reject(new Error('Failed to create poster blob'));
@@ -252,7 +246,6 @@ const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
         }, 250);
       }
 
-      // safety fallback
       setTimeout(() => {
         try {
           if (!video.paused) video.pause();
@@ -262,7 +255,6 @@ const extractVideoPoster = async (file: File, size = 1080): Promise<Blob> => {
   });
 };
 
-// helper to detect video urls (mp4/mov)
 const isVideoUrl = (url: string) => {
   if (!url) return false;
   return /\.(mp4|mov)(\?|$)/i.test(url);
@@ -272,11 +264,15 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
   dealId,
   images,
   onImagesChange,
-  label = 'JPG max 1080×1080 (300 KB) • MP4 max 1080×1920 (30s, 25 MB)',
+  label = 'JPG max 1080×1080 (300 KB) • MP4 max 1080×1920 (60s, 15 MB)',
+  maxMedia = 3,
 }) => {
+  const allowedMedia = clampMediaLimit(maxMedia);
   const [uploading, setUploading] = useState<number | null>(null);
 
-  // async validation: type, size, (dimensions for images and videos)
+  const normalized = useMemo(() => normalizeImages(images, allowedMedia), [images, allowedMedia]);
+  const usedCount = useMemo(() => normalized.filter(Boolean).length, [normalized]);
+
   const validateFileAsync = async (file: File): Promise<{ ok: boolean; type: 'image' | 'video' | null; ext: string | null }> => {
     const isImage =
       file.type === 'image/jpeg' ||
@@ -310,7 +306,6 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
         return { ok: false, type: null, ext: null };
       }
 
-      // check metadata: duration and dimensions
       try {
         const { width, height, duration } = await getVideoMetadata(file);
         if (duration > MAX_VIDEO_DURATION) {
@@ -321,7 +316,7 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
           });
           return { ok: false, type: null, ext: null };
         }
-        // allow orientation, but enforce max bounds
+
         const tooWide = width > MAX_VIDEO_WIDTH;
         const tooTall = height > MAX_VIDEO_HEIGHT;
         if (tooWide || tooTall) {
@@ -347,15 +342,8 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
       return { ok: true, type: 'video', ext };
     }
 
-    // Image checks
-    if (file.size > MAX_IMAGE_BYTES) {
-      // We will attempt client-side resize/compression later; allow pass here so we can process.
-      // But warn briefly (not an error yet).
-    }
-
     try {
       const { width, height } = await getImageDimensions(file);
-      // Images will be center-cropped to square; only check the larger dimension cannot be < 1
       if (width < 16 || height < 16) {
         toast({
           title: 'Error',
@@ -364,8 +352,7 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
         });
         return { ok: false, type: null, ext: null };
       }
-      // we allow larger images because we'll resize; so no strict rejection here
-    } catch (err: any) {
+    } catch (err) {
       console.error('Dimension check failed', err);
       toast({
         title: 'Error',
@@ -379,6 +366,15 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
   };
 
   const uploadFileAndMaybePoster = async (file: File, index: number) => {
+    if (index >= allowedMedia) {
+      toast({
+        title: 'Error',
+        description: `Your plan allows a maximum of ${allowedMedia} media items`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const validated = await validateFileAsync(file);
     if (!validated.ok || !validated.type) return;
 
@@ -387,12 +383,10 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
       const baseName = `${dealId}_${index}_${Date.now()}`;
       const ext = validated.ext ?? (file.name.split('.').pop() || 'bin');
 
-      // file paths
       const primaryPath =
         validated.type === 'video' ? `deals/${baseName}.${ext}` : `deals/${baseName}.jpg`;
       const posterPath = validated.type === 'video' ? `deals/${baseName}.poster.jpg` : null;
 
-      // If image: process then upload the processed JPEG blob
       if (validated.type === 'image') {
         const { blob, width, height } = await processImageToJpeg(file);
         const fileForUpload = new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
@@ -409,71 +403,67 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
         const primaryUrl = primaryPublic?.publicUrl ?? primaryPublic?.publicURL ?? '';
         if (!primaryUrl) throw new Error('Failed to get public URL for uploaded image');
 
-        const newImages = normalizeImages(images);
+        const newImages = normalizeImages(images, allowedMedia);
         newImages[index] = primaryUrl;
         onImagesChange(newImages);
 
-        toast({ title: 'Success', description: `Image uploaded (${width}×${height}px, ${Math.round(blob.size / 1024)} KB)` });
+        toast({
+          title: 'Success',
+          description: `Image uploaded (${width}×${height}px, ${Math.round(blob.size / 1024)} KB)`,
+        });
         return;
       }
 
-      // If video: upload original file (validated size/duration/res)
-      {
-        const { error: upErr } = await supabase.storage
-          .from('merchant-images')
-          .upload(primaryPath, file, {
-            upsert: true,
-            contentType: file.type,
-          });
-        if (upErr) throw upErr;
+      const { error: upErr } = await supabase.storage
+        .from('merchant-images')
+        .upload(primaryPath, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+      if (upErr) throw upErr;
 
-        const { data: primaryPublic } = supabase.storage.from('merchant-images').getPublicUrl(primaryPath);
-        const primaryUrl = primaryPublic?.publicUrl ?? primaryPublic?.publicURL ?? '';
-        if (!primaryUrl) throw new Error('Failed to get public URL for uploaded file');
+      const { data: primaryPublic } = supabase.storage.from('merchant-images').getPublicUrl(primaryPath);
+      const primaryUrl = primaryPublic?.publicUrl ?? primaryPublic?.publicURL ?? '';
+      if (!primaryUrl) throw new Error('Failed to get public URL for uploaded file');
 
-        // attempt to extract poster (1080x1080) and upload it
-        if (posterPath) {
-          try {
-            const posterBlob = await extractVideoPoster(file, Math.min(MAX_IMAGE_DIM, 1080));
-            // try to compress poster if needed (simple approach)
-            let posterToUpload: Blob = posterBlob;
-            if (posterBlob.size > MAX_IMAGE_BYTES) {
-              // downscale poster to 720 if needed
-              const canvas = document.createElement('canvas');
-              const img = await readImage(new File([posterBlob], 'tmp.jpg', { type: 'image/jpeg' }));
-              const size = Math.min(720, Math.max(320, Math.floor((MAX_IMAGE_DIM * 720) / 1080)));
-              canvas.width = size;
-              canvas.height = size;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(img, 0, 0, size, size);
-                // eslint-disable-next-line no-await-in-loop
-                posterToUpload = await encodeCanvasToJpeg(canvas, 0.8);
-              }
+      if (posterPath) {
+        try {
+          const posterBlob = await extractVideoPoster(file, Math.min(MAX_IMAGE_DIM, 1080));
+          let posterToUpload: Blob = posterBlob;
+
+          if (posterBlob.size > MAX_IMAGE_BYTES) {
+            const canvas = document.createElement('canvas');
+            const img = await readImage(new File([posterBlob], 'tmp.jpg', { type: 'image/jpeg' }));
+            const size = Math.min(720, Math.max(320, Math.floor((MAX_IMAGE_DIM * 720) / 1080)));
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, size, size);
+              posterToUpload = await encodeCanvasToJpeg(canvas, 0.8);
             }
-
-            const posterFile = new File([posterToUpload], `${baseName}.poster.jpg`, { type: 'image/jpeg' });
-            const { error: posterErr } = await supabase.storage
-              .from('merchant-images')
-              .upload(posterPath, posterFile, {
-                upsert: true,
-                contentType: 'image/jpeg',
-              });
-            if (posterErr) {
-              console.warn('Poster upload failed (non-fatal):', posterErr);
-            }
-          } catch (err) {
-            console.warn('Poster extraction failed (non-fatal):', err);
           }
+
+          const posterFile = new File([posterToUpload], `${baseName}.poster.jpg`, { type: 'image/jpeg' });
+          const { error: posterErr } = await supabase.storage
+            .from('merchant-images')
+            .upload(posterPath, posterFile, {
+              upsert: true,
+              contentType: 'image/jpeg',
+            });
+          if (posterErr) {
+            console.warn('Poster upload failed (non-fatal):', posterErr);
+          }
+        } catch (err) {
+          console.warn('Poster extraction failed (non-fatal):', err);
         }
-
-        const newImages = normalizeImages(images);
-        newImages[index] = primaryUrl;
-        onImagesChange(newImages);
-
-        toast({ title: 'Success', description: 'Video uploaded successfully!' });
-        return;
       }
+
+      const newImages = normalizeImages(images, allowedMedia);
+      newImages[index] = primaryUrl;
+      onImagesChange(newImages);
+
+      toast({ title: 'Success', description: 'Video uploaded successfully!' });
     } catch (err: any) {
       console.error('Upload error:', err);
       toast({
@@ -487,13 +477,14 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
   };
 
   const removeImage = async (index: number) => {
-    const current = normalizeImages(images);
+    const current = normalizeImages(images, allowedMedia);
     const url = current[index];
+
     if (url) {
       try {
         let filePath = '';
         if (url.includes('/storage/v1/object/public/')) {
-          const after = url.split('/storage/v1/object/public/')[1]; // "<bucket>/<path>"
+          const after = url.split('/storage/v1/object/public/')[1];
           const parts = after.split('/');
           if (parts.length > 1) {
             filePath = parts.slice(1).join('/');
@@ -516,87 +507,94 @@ export const DealThumbnailUpload: React.FC<DealThumbnailUploadProps> = ({
       }
     }
 
-    const newImages = normalizeImages(images);
+    const newImages = normalizeImages(images, allowedMedia);
     newImages[index] = '';
     onImagesChange(newImages);
   };
 
-  const normalized = normalizeImages(images);
-
   return (
     <div className="space-y-4">
-      <Label className="flex items-center gap-2 text-xs text-gray-500">{label}</Label>
+      <div className="space-y-1">
+        <Label className="flex items-center gap-2 text-xs text-gray-500">
+          {label}
+        </Label>
+        <div className="text-xs text-gray-500">
+          {usedCount} / {allowedMedia} media used
+        </div>
+      </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[0, 1, 2].map(index => {
-          const src = normalized[index];
-          const hasMedia = !!src;
-          const showVideo = hasMedia && isVideoUrl(src);
+      <div className="-mx-1 overflow-x-auto">
+        <div className="flex gap-3 px-1 pb-2">
+          {Array.from({ length: allowedMedia }, (_, index) => {
+            const src = normalized[index];
+            const hasMedia = !!src;
+            const showVideo = hasMedia && isVideoUrl(src);
 
-          const posterDerived = showVideo
-            ? src.replace(/\.[^/.]+(\?.*)?$/, '.poster.jpg')
-            : null;
+            const posterDerived = showVideo
+              ? src.replace(/\.[^/.]+(\?.*)?$/, '.poster.jpg')
+              : null;
 
-          return (
-            <div key={index} className="relative">
-              <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                {hasMedia ? (
-                  <>
-                    {showVideo ? (
-                      <img
-                        src={posterDerived || PLACEHOLDER_IMAGE}
-                        alt={`Deal media ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={e => {
-                          const t = e.target as HTMLImageElement;
-                          t.src = PLACEHOLDER_IMAGE;
+            return (
+              <div key={index} className="relative w-24 min-w-24 sm:w-28 sm:min-w-28">
+                <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                  {hasMedia ? (
+                    <>
+                      {showVideo ? (
+                        <img
+                          src={posterDerived || PLACEHOLDER_IMAGE}
+                          alt={`Deal media ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const t = e.target as HTMLImageElement;
+                            t.src = PLACEHOLDER_IMAGE;
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={src}
+                          alt={`Deal media ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const t = e.target as HTMLImageElement;
+                            t.src = PLACEHOLDER_IMAGE;
+                          }}
+                        />
+                      )}
+
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 w-6 h-6 p-0"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-gray-100 transition-colors">
+                      <Upload className="w-7 h-7 text-gray-400 mb-2" />
+                      <span className="text-[11px] text-gray-500 text-center px-2 leading-tight">
+                        {uploading === index ? 'Uploading...' : 'Upload JPG/MP4'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,video/mp4,video/quicktime"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await uploadFileAndMaybePoster(file, index);
+                          if (e.target) (e.target as HTMLInputElement).value = '';
                         }}
+                        disabled={uploading === index}
                       />
-                    ) : (
-                      <img
-                        src={src}
-                        alt={`Deal media ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={e => {
-                          const t = e.target as HTMLImageElement;
-                          t.src = PLACEHOLDER_IMAGE;
-                        }}
-                      />
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 w-6 h-6 p-0"
-                      onClick={() => removeImage(index)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-gray-100 transition-colors">
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-xs text-gray-500 text-center px-2">
-                      {uploading === index ? 'Uploading...' : 'Upload JPG/MP4'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,video/mp4,video/quicktime"
-                      className="hidden"
-                      onChange={async e => {
-                        const file = e.target.files?.[0];
-                        if (file) await uploadFileAndMaybePoster(file, index);
-                        if (e.target) (e.target as HTMLInputElement).value = '';
-                      }}
-                      disabled={uploading === index}
-                    />
-                  </label>
-                )}
+                    </label>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

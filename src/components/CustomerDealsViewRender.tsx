@@ -153,7 +153,7 @@ return copy;
   };
 
   return (
-    <div style={{ width: "100%", overflowX: "hidden", overflowY: "hidden" }}>
+    <div style={{ width: "100%", overflowX: "hidden", overflowY: "auto", paddingBottom: "80px" }}>
 
 {loading && rows.length === 0 && (
   <div style={{ padding: 8, fontSize: 12, color: "#6B7280" }}>

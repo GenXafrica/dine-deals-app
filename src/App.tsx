@@ -41,7 +41,7 @@ import { supabase, broadcastAuthChange } from "@/lib/supabase";
 import { AboutUs } from "@/components/AboutUs";
 import AppLayout from "@/components/AppLayout";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import WireframeAnalysisPage from "./pages/WireframeAnalysis";
+import WireframeAnalysisPage from "./pages/InfoGuides";
 
 /* =========================
    SCROLL RESET ON ROUTE CHANGE

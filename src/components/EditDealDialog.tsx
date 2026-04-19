@@ -1,7 +1,7 @@
 // src/components/EditDealDialog.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Check, X as IconX, Edit3, Plus } from 'lucide-react';
+import { Calendar, Check, X as IconX, Edit3, Plus, Globe, Phone, MessageCircle, Send } from 'lucide-react';
 import { DealThumbnailUpload } from './DealThumbnailUpload';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -30,6 +30,11 @@ interface EditDealDialogProps {
 
 const DEAL_TITLE_LIMIT = 50;
 const DEAL_DESCRIPTION_LIMIT = 200;
+
+const STARTER_MEDIA_LIMIT = 3;
+const MAIN_COURSE_MEDIA_LIMIT = 5;
+const CHEFS_TABLE_MEDIA_LIMIT = 7;
+const PREVIEW_ROTATION_INTERVAL_MS = 2500;
 
 const PLACEHOLDER_IMAGE =
   "https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/deal-placeholder.jpg";
@@ -96,6 +101,32 @@ const derivePosterUrl = (videoUrl: string) => {
   return videoUrl.replace(/\.[^/.]+(\?.*)?$/, '.poster.jpg');
 };
 
+const getMediaLimitFromFeatures = (features?: any): number | null => {
+  if (!Array.isArray(features)) return null;
+
+  for (const feature of features) {
+    if (typeof feature !== 'string') continue;
+    const match = feature.match(/up to\s+(\d+)\s+media files?/i);
+    if (match) {
+      const parsed = parseInt(match[1], 10);
+      if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  return null;
+};
+
+const getMediaLimitForPlan = (planName?: string | null, features?: any) => {
+  const featureLimit = getMediaLimitFromFeatures(features);
+  if (featureLimit) return featureLimit;
+
+  if (!planName) return STARTER_MEDIA_LIMIT;
+  const normalized = planName.toLowerCase();
+  if (normalized.includes('chef')) return CHEFS_TABLE_MEDIA_LIMIT;
+  if (normalized.includes('main')) return MAIN_COURSE_MEDIA_LIMIT;
+  return STARTER_MEDIA_LIMIT;
+};
+
 export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   deal,
   open,
@@ -116,16 +147,16 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   });
   const [saving, setSaving] = useState(false);
   const [currentDealId, setCurrentDealId] = useState<string | null>(null);
+  const [planName, setPlanName] = useState<string>('Starter Course');
+  const [maxMediaItems, setMaxMediaItems] = useState<number>(STARTER_MEDIA_LIMIT);
 
   // full-screen player state (merchant preview box only)
-  const [playerOpen, setPlayerOpen] = useState(false);
-  const [playerUrl, setPlayerUrl] = useState<string | null>(null);
-
   // ref for inner scroll container
   const innerRef = useRef<HTMLDivElement | null>(null);
 
   // dynamic bottom padding so dialog content scrolls above fixed footer
   const [bottomPaddingPx, setBottomPaddingPx] = useState<number>(48);
+  const [previewStartIndex, setPreviewStartIndex] = useState(0);
 
   useEffect(() => {
     const updatePadding = () => {
@@ -335,8 +366,6 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   useEffect(() => {
     if (!deal || !open) return;
 
-    // Do not overwrite while editing same deal
-    if (currentDealId === (deal.id ?? null)) return;
 
     const imagesArr: string[] =
       Array.isArray(deal.images) && deal.images.length > 0
@@ -392,11 +421,103 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const loadMerchantPlanAndLimit = async () => {
+      const merchantId = await getCurrentMerchantId();
+      if (!merchantId) {
+        setPlanName('Starter Course');
+        setMaxMediaItems(STARTER_MEDIA_LIMIT);
+        return;
+      }
+
+      try {
+        const { data: subscriptionRow, error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .select('subscription_plans(name, features)')
+          .eq('merchant_id', merchantId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (subscriptionError) {
+          console.warn('Could not load active subscription plan for media limit', subscriptionError);
+        }
+
+        const subscriptionPlan = Array.isArray(subscriptionRow?.subscription_plans)
+          ? subscriptionRow.subscription_plans[0]
+          : subscriptionRow?.subscription_plans;
+
+        const subscriptionPlanName = subscriptionPlan?.name;
+        const subscriptionPlanFeatures = subscriptionPlan?.features;
+
+        if (subscriptionPlanName) {
+          setPlanName(subscriptionPlanName);
+          setMaxMediaItems(getMediaLimitForPlan(subscriptionPlanName, subscriptionPlanFeatures));
+          return;
+        }
+
+        const { data: merchantRow, error: merchantError } = await supabase
+          .from('merchants')
+          .select('subscription_plan_id, subscription_plans(name, features)')
+          .eq('id', merchantId)
+          .maybeSingle();
+
+        if (merchantError) {
+          console.warn('Could not load merchant fallback plan for media limit', merchantError);
+        }
+
+        const merchantPlan = Array.isArray(merchantRow?.subscription_plans)
+          ? merchantRow.subscription_plans[0]
+          : merchantRow?.subscription_plans;
+
+        const merchantPlanName = merchantPlan?.name;
+        const merchantPlanFeatures = merchantPlan?.features;
+
+        if (merchantPlanName) {
+          setPlanName(merchantPlanName);
+          setMaxMediaItems(getMediaLimitForPlan(merchantPlanName, merchantPlanFeatures));
+          return;
+        }
+
+        setPlanName('Starter Course');
+        setMaxMediaItems(STARTER_MEDIA_LIMIT);
+      } catch (error) {
+        console.warn('Failed to load media limit plan, defaulting to Starter Course', error);
+        setPlanName('Starter Course');
+        setMaxMediaItems(STARTER_MEDIA_LIMIT);
+      }
+    };
+
+    loadMerchantPlanAndLimit();
+  }, [open]);
+
+  useEffect(() => {
+    setEdited(prev => {
+      if ((prev.images?.length ?? 0) <= maxMediaItems) return prev;
+      return {
+        ...prev,
+        images: (prev.images || []).slice(0, maxMediaItems),
+      };
+    });
+  }, [maxMediaItems]);
+
   const handleSave = async () => {
     if (!edited.title || !edited.description) {
       toast({
         title: 'Error',
         description: 'Please fill in the Deal Offer and Description',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if ((edited.images?.length ?? 0) > maxMediaItems) {
+      toast({
+        title: 'Media limit reached',
+        description: `${planName} allows up to ${maxMediaItems} media items.`,
         variant: 'destructive',
       });
       return;
@@ -584,9 +705,33 @@ if (deal.id && validImgs.length > 0) {
     : [];
 
   const baseImages =
-    edited.images && edited.images.length ? edited.images : [PLACEHOLDER_IMAGE];
-  const previewImages = baseImages.slice(0, 3);
+    edited.images && edited.images.length ? edited.images.filter(Boolean) : [PLACEHOLDER_IMAGE];
+
+  useEffect(() => {
+    setPreviewStartIndex(0);
+  }, [deal.id, edited.images]);
+
+  useEffect(() => {
+    if (baseImages.length <= 3) return;
+
+    const intervalId = window.setInterval(() => {
+      setPreviewStartIndex(prev => (prev + 1) % baseImages.length);
+    }, PREVIEW_ROTATION_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [baseImages.length]);
+
+  const previewImages = Array.from({ length: Math.min(3, baseImages.length) }, (_, index) => {
+    return baseImages[(previewStartIndex + index) % baseImages.length];
+  });
+
   while (previewImages.length < 3) previewImages.push(PLACEHOLDER_IMAGE);
+
+  const previewDescription = edited.description || 'Short description for the deal.';
+  const previewDescriptionIsLong = previewDescription.length > 140;
+  const previewDescriptionText = previewDescriptionIsLong
+    ? `${previewDescription.slice(0, 140).trimEnd()}...`
+    : previewDescription;
 
   // Render portal modal when open
   if (!open || typeof document === 'undefined') return null;
@@ -604,7 +749,7 @@ if (deal.id && validImgs.length > 0) {
 
       <div
         ref={innerRef}
-        className="relative bg-white w-[92%] max-w-md sm:max-w-lg md:max-w-4xl mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto px-3 pt-3 pb-2 md:px-6 md:pt-4 md:pb-6 rounded-2xl shadow-lg"
+        className="relative bg-white w-[92%] max-w-md sm:max-w-lg md:w-[calc(100vw-48px)] md:max-w-[1200px] mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto md:mt-6 md:mb-6 md:h-auto md:max-h-[calc(100vh-48px)] md:overflow-y-auto px-3 pt-3 pb-2 md:px-5 md:pt-3 md:pb-5 rounded-2xl shadow-lg"
         style={{ paddingBottom: `${bottomPaddingPx}px` }}
         onMouseDown={e => e.stopPropagation()}
       >
@@ -753,137 +898,206 @@ if (deal.id && validImgs.length > 0) {
               <DealThumbnailUpload
                 dealId={deal?.id && deal.id !== 'new' ? deal.id : ''}
                 images={edited.images}
-                onImagesChange={images => setEdited(prev => ({ ...prev, images }))}
-                label="JPG max 1080×1080 (300 KB) • MP4 max 1080×1920 (60s, 15 MB)"
+                maxMedia={maxMediaItems}
+                onImagesChange={images => {
+                  const limitedImages = (images || []).slice(0, maxMediaItems);
+                  if ((images || []).length > maxMediaItems) {
+                    toast({
+                      title: 'Media limit reached',
+                      description: `${planName} allows up to ${maxMediaItems} media items.`,
+                      variant: 'destructive',
+                    });
+                  }
+                  setEdited(prev => ({ ...prev, images: limitedImages }));
+                }}
+                label={`Max ${maxMediaItems} media items • JPG max 1080×1080 (300 KB) • MP4 max 1080×1920 (60s, 15 MB)`}
               />
             </div>
           </div>
 
           {/* RIGHT: preview */}
-          <div className="mt-8 md:mt-0">
-            <div
-              className="bg-white border rounded-lg shadow-sm p-3 text-sm"
-              style={{ borderColor: '#FBB345', borderWidth: 2 }}
-            >
-              <h3 className="font-semibold mb-2">Deal Preview</h3>
+          <div className="mt-8 md:mt-0 md:h-full md:flex md:justify-center">
+            <div className="w-full md:w-[340px] md:max-w-full md:h-full">
+              <div className="mb-2 text-sm font-semibold text-gray-900">Deal Preview</div>
 
               <div
-                className="font-extrabold text-base md:text-lg text-gray-900 mb-2 leading-tight"
-                style={{
-                  whiteSpace: 'normal',
-                  overflowWrap: 'anywhere',
-                  wordBreak: 'break-word',
-                }}
+                className="bg-white border rounded-lg shadow-sm p-3 text-sm md:hidden"
+                style={{ borderColor: '#FBB345', borderWidth: 2 }}
               >
-                {edited.title || 'Deal title'}
-              </div>
+                <div
+                  className="font-extrabold text-base text-gray-900 mb-2 leading-tight"
+                  style={{
+                    whiteSpace: 'normal',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {edited.title || 'Deal title'}
+                </div>
 
-              <div className="mb-2">
-                <div className="grid grid-cols-3 gap-2">
-                  {previewImages.map((src, idx) => {
-                    const isPlaceholder = src === PLACEHOLDER_IMAGE;
-                    const showVideo = !isPlaceholder && isVideoUrl(src);
-                    const posterUrl = showVideo ? derivePosterUrl(src) : null;
+                <div className="mb-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {previewImages.map((src, idx) => {
+                      const isPlaceholder = src === PLACEHOLDER_IMAGE;
+                      const showVideo = !isPlaceholder && isVideoUrl(src);
+                      const posterUrl = showVideo ? derivePosterUrl(src) : null;
 
-                    return (
-                      <div
-                        key={idx}
-                        className="w-full aspect-square rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
-                      >
-                        {showVideo ? (
-                          <>
-                            <img
-                              src={posterUrl || PLACEHOLDER_IMAGE}
-                              alt={`Deal poster ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                              onError={e => {
-                                const t = e.target as HTMLImageElement;
-                                t.src = PLACEHOLDER_IMAGE;
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPlayerUrl(src);
-                                setPlayerOpen(true);
-                              }}
-                              aria-label="Play video"
-                              className="absolute inset-0 flex items-center justify-center"
-                              style={{ background: 'transparent', border: 'none' }}
-                            >
-                              <div
-                                style={{
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: 9999,
-                                  background: 'rgba(0,0,0,0.45)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                  <path d="M8 5v14l11-7-11-7z" fill="#fff" />
-                                </svg>
-                              </div>
-                            </button>
-                          </>
-                        ) : (
+                      return (
+                        <div
+                          key={`mobile-${src}-${idx}`}
+                          className="w-full aspect-square rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
+                        >
                           <img
-                            src={src || PLACEHOLDER_IMAGE}
-                            alt={`Deal media ${idx + 1}`}
+                            src={showVideo ? (posterUrl || PLACEHOLDER_IMAGE) : (src || PLACEHOLDER_IMAGE)}
+                            alt={showVideo ? `Deal poster ${idx + 1}` : `Deal media ${idx + 1}`}
                             className="w-full h-full object-cover"
                             onError={e => {
                               const t = e.target as HTMLImageElement;
                               t.src = PLACEHOLDER_IMAGE;
                             }}
                           />
-                        )}
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-{activeDayAbbrs.length > 0 ? (
-  <div
-    className="mb-2 text-xs text-gray-700"
-    style={{
-      lineHeight: 1.4,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-    }}
-  >
-    <span style={{ fontWeight: 700, color: "#111827" }}>Valid:</span>{" "}
-    {activeDayAbbrs.join(" • ")}
-  </div>
-) : (
-  <div className="mb-2 text-xs text-gray-500">
-    Applies on all days within the deal dates.
-  </div>
-)}
-
-              <div className="mb-2 text-xs text-gray-700 break-words whitespace-normal">
-                {edited.description || 'Short description for the deal.'}
-              </div>
-
-              <div className="flex items-center gap-3 mb-3">
-                {previewPrice && (
-                  <div className="font-extrabold text-xl md:text-2xl text-red-600">
-                    {previewPrice}
+                {activeDayAbbrs.length > 0 ? (
+                  <div className="mb-2 text-xs text-gray-700 leading-snug">
+                    <span className="font-bold text-gray-900">Valid:</span>{' '}
+                    {activeDayAbbrs.join(' • ')}
+                  </div>
+                ) : (
+                  <div className="mb-2 text-xs text-gray-500 leading-snug">
+                    Applies on all days within the deal dates.
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
-                  </span>
+
+                <div className="mb-2 text-xs text-gray-700 break-words whitespace-normal leading-relaxed">
+                  {previewDescriptionText}
+                </div>
+
+                {previewDescriptionIsLong && (
+                  <div className="mb-3 text-sm font-semibold text-green-600">Read more</div>
+                )}
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  {previewPrice && (
+                    <div className="font-extrabold text-2xl text-red-600">{previewPrice}</div>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-1 text-[11px] text-gray-500 text-center">
-                Customer screen may have small layout changes.
+              <div className="hidden md:flex md:h-full md:flex-col md:items-center">
+                <div className="w-full max-w-[320px] rounded-[34px] bg-[#f3f4f6] p-3 shadow-sm">
+                  <div
+                    className="rounded-[30px] border bg-white p-4 text-sm md:min-h-[560px] md:flex md:flex-col"
+                    style={{ borderColor: '#FBB345', borderWidth: 1 }}
+                  >
+                    <div
+                      className="font-extrabold text-2xl text-gray-900 mb-4 leading-tight"
+                      style={{
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {edited.title || 'Deal title'}
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        {previewImages.map((src, idx) => {
+                          const isPlaceholder = src === PLACEHOLDER_IMAGE;
+                          const showVideo = !isPlaceholder && isVideoUrl(src);
+                          const posterUrl = showVideo ? derivePosterUrl(src) : null;
+
+                          return (
+                            <div
+                              key={`desktop-${src}-${idx}`}
+                              className="w-full aspect-square rounded-[22px] overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
+                            >
+                              <img
+                                src={showVideo ? (posterUrl || PLACEHOLDER_IMAGE) : (src || PLACEHOLDER_IMAGE)}
+                                alt={showVideo ? `Deal poster ${idx + 1}` : `Deal media ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={e => {
+                                  const t = e.target as HTMLImageElement;
+                                  t.src = PLACEHOLDER_IMAGE;
+                                }}
+                              />
+                              {showVideo && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-sm font-semibold">
+                                  Video
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {activeDayAbbrs.length > 0 ? (
+                      <div className="mb-4 text-lg text-gray-700 leading-snug">
+                        <span className="font-bold text-gray-900">Valid:</span>{' '}
+                        {activeDayAbbrs.join(' • ')}
+                      </div>
+                    ) : (
+                      <div className="mb-4 text-sm text-gray-500 leading-snug">
+                        Applies on all days within the deal dates.
+                      </div>
+                    )}
+
+                    <div className="mb-3 text-lg text-gray-700 break-words whitespace-normal leading-relaxed">
+                      {previewDescriptionText}
+                    </div>
+
+                    {previewDescriptionIsLong && (
+                      <div className="mb-6 text-base font-semibold text-green-600">Read more</div>
+                    )}
+
+                    <div className="flex items-center gap-3 mb-8 mt-auto flex-wrap">
+                      {previewPrice && (
+                        <div className="font-extrabold text-5xl leading-none text-red-600">
+                          {previewPrice.replace('.00', '')}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-base text-gray-500">
+                        <Calendar className="w-7 h-7 text-red-600" />
+                        <span>
+                          {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mb-8 flex items-center gap-2 text-xl text-[#3366cc] break-all">
+                      <Globe className="w-6 h-6 shrink-0" />
+                      <span>dinedeals.co.za</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="h-20 rounded-[22px] bg-[#e42320] shadow-sm flex items-center justify-center">
+                        <Phone className="w-9 h-9 text-white" />
+                      </div>
+                      <div className="h-20 rounded-[22px] bg-[#1fad4b] shadow-sm flex items-center justify-center">
+                        <MessageCircle className="w-9 h-9 text-white" />
+                      </div>
+                      <div className="h-20 rounded-[22px] bg-[#db7d07] shadow-sm flex items-center justify-center">
+                        <Send className="w-9 h-9 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-center text-xs text-gray-500">
+                  Customer screen may have small layout changes.
+                </div>
               </div>
             </div>
           </div>
@@ -1171,51 +1385,6 @@ if (deal.id && validImgs.length > 0) {
                     <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {playerOpen &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[1100000] flex items-center justify-center"
-            role="dialog"
-            aria-modal="true"
-            onMouseDown={() => {
-              setPlayerOpen(false);
-              setPlayerUrl(null);
-            }}
-          >
-            <div className="absolute inset-0 bg-black z-[1100000]" />
-            <div
-              className="relative z-[1100001] w-full max-w-xl mx-4 rounded-lg overflow-hidden"
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <div className="flex justify-end p-2 bg-black/20">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlayerOpen(false);
-                    setPlayerUrl(null);
-                  }}
-                  aria-label="Close player"
-                  className="p-2 text-white"
-                >
-                  <IconX />
-                </button>
-              </div>
-              <div className="bg-black">
-                {playerUrl && (
-                  <video
-                    src={playerUrl}
-                    controls
-                    autoPlay
-                    playsInline
-                    className="w-full h-[70vh] md:h-[80vh] object-contain bg-black"
-                  />
-                )}
               </div>
             </div>
           </div>,

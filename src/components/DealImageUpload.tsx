@@ -13,8 +13,6 @@ interface DealImageUploadProps {
   placeholder?: string;
 }
 
-const PLACEHOLDER_IMAGE = 'https://d64gsuwffb70l.cloudfront.net/placeholder_240x240.png';
-
 // Existing image limits (unchanged)
 const MAX_FILE_SIZE = 300 * 1024; // 300 KB
 const MAX_DIMENSION = 1080; // 1080 x 1080
@@ -248,12 +246,8 @@ export const DealImageUpload: React.FC<DealImageUploadProps> = ({
           />
         </div>
       ) : (
-        <div className="mt-2">
-          <img
-            src={PLACEHOLDER_IMAGE}
-            alt="Placeholder"
-            className="w-24 h-24 object-cover rounded-lg border"
-          />
+        <div className="mt-2 w-24 h-24 rounded-lg border flex items-center justify-center bg-muted text-muted-foreground">
+          <ImageIcon className="w-6 h-6" />
         </div>
       )}
     </div>

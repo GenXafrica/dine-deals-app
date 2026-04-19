@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tag, Trash2, ThumbsUp, Heart } from 'lucide-react';
+import { Tag, Trash2, ThumbsUp, Heart, Pencil, Lock } from 'lucide-react';
 import { EditDealDialog } from './EditDealDialog';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import { supabase } from '@/lib/supabase';
@@ -93,7 +93,7 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
   return (
     <Card className="bg-[#F3F4F6]">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Tag className="w-5 h-5" />
@@ -112,8 +112,20 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
               setEditDialogOpen(true);
             }}
             disabled={!canAdd || addingDeal || loading}
+            className={
+              !canAdd
+                ? 'bg-gray-300 hover:bg-gray-300 text-gray-700 rounded-xl px-4'
+                : 'rounded-xl px-4'
+            }
           >
-            Add Deal
+            {canAdd ? (
+              'Add Deal'
+            ) : (
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Full
+              </span>
+            )}
           </Button>
         </div>
       </CardHeader>
@@ -121,53 +133,72 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
       <CardContent className="space-y-4">
         {deals.map((deal) => {
           const counts = engagementMap[deal.id] || { like: 0, love: 0 };
+          const isActive = Boolean(deal.is_active);
 
           return (
             <div
               key={deal.id}
-              className="border rounded-lg p-4 bg-white"
+              className="border rounded-xl p-4 bg-white"
             >
-              <div className="w-full">
-                <h3
-                  className="font-semibold leading-tight"
-                  style={{
-                    whiteSpace: 'normal',
-                    overflowWrap: 'anywhere',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {deal.title}
-                </h3>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3
+                      className="text-xl font-bold leading-tight flex-1"
+                      style={{
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {deal.title}
+                    </h3>
 
-                <p
-                  className="text-sm text-gray-600 mt-1 leading-tight"
-                  style={{
-                    whiteSpace: 'normal',
-                    overflowWrap: 'anywhere',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {deal.description}
-                </p>
-
-                <div className="flex items-center gap-4 mt-2 text-sm">
-                  <div className="flex items-center gap-1">
-                    <ThumbsUp size={14} color="#16A34A" fill="#16A34A" strokeWidth={0} />
-                    <span className="text-green-600 font-medium">
-                      {counts.like}
+                    <span
+                      className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                        isActive
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    <Heart size={14} color="#dc2626" fill="#dc2626" strokeWidth={0} />
-                    <span className="text-red-600 font-medium">
-                      {counts.love}
-                    </span>
+                  <p
+                    className="text-sm text-gray-600 mt-2 leading-relaxed"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {deal.description}
+                  </p>
+
+                  <div className="flex items-center gap-4 mt-3 text-sm">
+                    <div className="flex items-center gap-1">
+                      <ThumbsUp size={14} color="#16A34A" fill="#16A34A" strokeWidth={0} />
+                      <span className="text-green-600 font-medium">
+                        {counts.like}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Heart size={14} color="#dc2626" fill="#dc2626" strokeWidth={0} />
+                      <span className="text-red-600 font-medium">
+                        {counts.love}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center mt-3">
+              <div className="flex justify-between items-center mt-4">
                 <span className="text-xs text-gray-400">
                   (Deal #{deal.deal_number ?? '-'})
                 </span>
@@ -176,15 +207,17 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
                   <button
                     onClick={() => handleEditDeal(deal)}
                     disabled={loading}
-                    className="bg-blue-600 p-2 rounded text-white"
+                    className="bg-blue-600 p-2 rounded-md text-white"
+                    aria-label="Edit deal"
                   >
-                    ✎
+                    <Pencil size={16} />
                   </button>
 
                   <button
                     onClick={() => openDeleteDialog(deal)}
                     disabled={loading || deletingDealId === deal.id}
-                    className="bg-red-600 p-2 rounded text-white"
+                    className="bg-red-600 p-2 rounded-md text-white"
+                    aria-label="Delete deal"
                   >
                     <Trash2 size={16} />
                   </button>

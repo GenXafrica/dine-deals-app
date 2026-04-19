@@ -49,6 +49,8 @@ const DAY_NORMALIZE_MAP: Record<string, string> = {
 };
 
 const SWIPE_THRESHOLD = 40;
+const THUMBNAIL_VISIBLE_COUNT = 3;
+const THUMBNAIL_ROTATION_MS = 2500;
 
 const toShortDay = (raw: string): string | null => {
   if (!raw) return null;
@@ -305,6 +307,15 @@ const extractDealMedia = (deal: any): DealMediaItem[] => {
   return items;
 };
 
+const getRotatingThumbnailItems = (media: DealMediaItem[]) => {
+  if (!media.length) return [];
+
+  return media.map((item, index) => ({
+    ...item,
+    originalIndex: index,
+  }));
+};
+
 const formatLatLngShort = (lat?: number, lng?: number) => {
   if (typeof lat !== "number" || typeof lng !== "number") return "";
   const lats = lat.toFixed(4);
@@ -409,6 +420,7 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
   hideActions = false,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0);
   const [lightboxMediaIndex, setLightboxMediaIndex] = useState<number | null>(null);
   const [hasStartedLightboxVideo, setHasStartedLightboxVideo] = useState(false);
   const lightboxTouchStartX = useRef<number | null>(null);
@@ -434,7 +446,18 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
   };
 
   const carouselMedia = extractDealMedia(deal);
+  const rotatingMedia = getRotatingThumbnailItems(carouselMedia);
   const activeLightboxMedia = lightboxMediaIndex != null ? carouselMedia[lightboxMediaIndex] || null : null;
+
+  const visibleThumbnailItems = (() => {
+    if (!rotatingMedia.length) return [null, null, null];
+    if (rotatingMedia.length <= THUMBNAIL_VISIBLE_COUNT) return rotatingMedia;
+
+    return Array.from({ length: THUMBNAIL_VISIBLE_COUNT }, (_, offset) => {
+      const nextIndex = (thumbnailStartIndex + offset) % rotatingMedia.length;
+      return rotatingMedia[nextIndex];
+    });
+  })();
 
   useEffect(() => {
     setHasStartedLightboxVideo(false);
@@ -468,6 +491,20 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
     setLightboxMediaIndex(null);
     setHasStartedLightboxVideo(false);
   }, [deal?.id, deal?.images, deal?.image_url, deal?.image]);
+
+  useEffect(() => {
+    setThumbnailStartIndex(0);
+  }, [deal?.id, deal?.images, deal?.image_url, deal?.image]);
+
+  useEffect(() => {
+    if (carouselMedia.length <= THUMBNAIL_VISIBLE_COUNT) return;
+
+    const intervalId = window.setInterval(() => {
+      setThumbnailStartIndex((prev) => (prev + 1) % carouselMedia.length);
+    }, THUMBNAIL_ROTATION_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [carouselMedia.length]);
 
   const handlePlayVideo = (e?: React.SyntheticEvent) => {
     e?.stopPropagation?.();
@@ -910,25 +947,34 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
 
         <div style={{ marginBottom: 8 }}>
           {(() => {
-            const visible: Array<DealMediaItem | null> = carouselMedia.slice(0, 3);
-            while (visible.length < 3) visible.push(null);
+            const visible = visibleThumbnailItems;
 
             return (
-              <div className="thumbnails-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, overflow: "hidden", paddingBottom: 6 }}>
+              <div
+                className="thumbnails-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))`,
+                  gap: 8,
+                  overflow: "hidden",
+                  paddingBottom: 6,
+                }}
+              >
                 {visible.map((item, idx) => {
                   const src = item?.url || null;
                   const isVideo = item?.type === "video";
                   const poster = item?.poster || undefined;
                   const imageSrc = isVideo ? poster || PLACEHOLDER_IMAGE : src || PLACEHOLDER_IMAGE;
+                  const originalIndex = item && "originalIndex" in item ? item.originalIndex : idx;
 
                   return (
                     <div
-                      key={`thumb-${idx}`}
+                      key={`thumb-${item ? `${normalizeUrl(item.url)}-${originalIndex}` : idx}`}
                       onClick={() => {
                         if (!item) return;
-                        openMediaLightbox(item, idx);
+                        openMediaLightbox(item, originalIndex);
                       }}
-                      aria-label={`Open image ${idx + 1}`}
+                      aria-label={`Open image ${originalIndex + 1}`}
                       style={{
                         width: "100%",
                         aspectRatio: "1 / 1",
@@ -943,12 +989,12 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
                     >
                       <img
                         src={imageSrc}
-                        alt={deal.title || `image-${idx + 1}`}
+                        alt={deal.title || `image-${originalIndex + 1}`}
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
                         }}
-                        title={isVideo ? `Video ${idx + 1}` : `Image ${idx + 1}`}
+                        title={isVideo ? `Video ${originalIndex + 1}` : `Image ${originalIndex + 1}`}
                       />
 
                       {src && isVideo && (
