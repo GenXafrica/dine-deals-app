@@ -1028,6 +1028,20 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
           })()}
         </div>
 
+        {visibleThumbnailItems.length > 0 && (
+          <div
+            style={{
+              marginBottom: 10,
+              textAlign: "center",
+              fontSize: 12,
+              color: "#6B7280",
+              lineHeight: 1.4,
+            }}
+          >
+            Tap image to expand
+          </div>
+        )}
+
         {configuredShortDays.size > 0 && (
           <div
             style={{

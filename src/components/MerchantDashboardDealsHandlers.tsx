@@ -52,10 +52,10 @@ export const createDealHandlers = (
     setDeletingDealId(dealId);
 
     try {
-      const { error } = await supabase.rpc('update_deal', {
-        p_deal_id: dealId,
-        p_is_active: false,
-      });
+      const { error } = await supabase
+        .from('deals')
+        .delete()
+        .eq('id', dealId);
 
       if (error) throw error;
 

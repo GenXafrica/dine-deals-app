@@ -133,7 +133,17 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
       <CardContent className="space-y-4">
         {deals.map((deal) => {
           const counts = engagementMap[deal.id] || { like: 0, love: 0 };
-          const isActive = Boolean(deal.is_active);
+          const now = new Date();
+
+const endsAt = (deal as any).ends_at ? new Date((deal as any).ends_at) : null;
+const validUntil = (deal as any).valid_until ? new Date((deal as any).valid_until) : null;
+
+const isActive =
+  Boolean(deal.is_active) &&
+  (
+    (endsAt && endsAt > now) ||
+    (!endsAt && validUntil && validUntil > now)
+  );
 
           return (
             <div

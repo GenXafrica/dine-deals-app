@@ -254,7 +254,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
     !!subscription?.pending_billing_cycle;
 
   const showPendingChange =
-    !isPromo &&
     !!subscription?.pending_switch_date &&
     hasPendingPlanChange;
 
@@ -334,7 +333,7 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
             <div>
               <p className="text-sm text-amber-900 font-medium">
                 {isPendingCancellation
-                  ? 'Subscription Cancelled'
+                  ? 'Cancellation scheduled'
                   : 'Downgrade scheduled'}
               </p>
               <p className="text-sm text-amber-800">

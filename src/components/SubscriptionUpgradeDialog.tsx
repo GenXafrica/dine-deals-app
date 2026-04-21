@@ -492,13 +492,13 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
 
                   const customFeatures =
                     plan.slug === 'starter'
-                      ? ['Add up to 1 Deal.', 'Email / WhatsApp Support.']
+                      ? ['Add up to 1 Deal.', 'Three media files per deal.']
                       : plan.slug === 'main'
-                      ? ['Add up to 3 Deals.', 'Email / WhatsApp Support.']
+                      ? ['Add up to 3 Deals.', 'Five media files per deal.']
                       : [
                           'Add up to 5 Deals.',
+                          'Seven media files per deal.',
                           'Customer deal notifications',
-                          'Email / WhatsApp Support.',
                         ];
 
                   const savings =

@@ -1,7 +1,7 @@
 // src/components/EditDealDialog.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Check, X as IconX, Edit3, Plus, Globe, Phone, MessageCircle, Send } from 'lucide-react';
+import { Calendar, Check, X as IconX, Pencil, Plus, Globe, Phone, MessageCircle, Send } from 'lucide-react';
 import { DealThumbnailUpload } from './DealThumbnailUpload';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -618,16 +618,21 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
         throw new Error('Invalid deal id for update');
       }
 
+const isActive = true;
+
 const p_payload: any = {
   title: edited.title,
   description: edited.description,
-  is_active: deal.is_active ?? true,
+  is_active: isActive,
 };
 
 // only include if actually set
 if (p_price !== null) p_payload.price = p_price;
 if (p_starts_at) p_payload.starts_at = p_starts_at;
-if (p_ends_at) p_payload.ends_at = p_ends_at;
+if (p_ends_at) {
+  p_payload.ends_at = p_ends_at;
+  p_payload.valid_until = p_ends_at;
+}
 if (firstImage) p_payload.image = firstImage;
 if (p_repeat && p_repeat.days?.length > 0) p_payload.repeat = p_repeat;
 
@@ -749,11 +754,11 @@ if (deal.id && validImgs.length > 0) {
 
       <div
         ref={innerRef}
-        className="relative bg-white w-[92%] max-w-md sm:max-w-lg md:w-[calc(100vw-48px)] md:max-w-[1200px] mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto md:mt-6 md:mb-6 md:h-auto md:max-h-[calc(100vh-48px)] md:overflow-y-auto px-3 pt-3 pb-2 md:px-5 md:pt-3 md:pb-5 rounded-2xl shadow-lg"
+        className="relative bg-white w-[92%] max-w-md sm:max-w-lg md:w-[calc(100vw-48px)] md:max-w-[1080px] mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto md:mt-6 md:mb-6 md:h-auto md:max-h-[calc(100vh-48px)] md:overflow-y-auto px-3 pt-3 pb-2 md:px-4 md:pt-3 md:pb-5 rounded-2xl shadow-lg"
         style={{ paddingBottom: `${bottomPaddingPx}px` }}
         onMouseDown={e => e.stopPropagation()}
       >
-        <div className="mt-1 md:grid md:grid-cols-2 md:gap-6">
+        <div className="mt-1 md:grid md:grid-cols-[minmax(0,1fr)_340px] md:gap-4 md:items-start">
           {/* LEFT: form */}
           <div className="space-y-3 pb-0">
             <div>
@@ -857,7 +862,7 @@ if (deal.id && validImgs.length > 0) {
                       color: '#ffffff',
                     }}
                   >
-                    <Edit3 style={{ width: 18, height: 18, color: '#ffffff' }} />
+                    <Pencil className="w-[18px] h-[18px] text-white" />
                   </button>
                 </div>
               </div>
@@ -913,91 +918,67 @@ if (deal.id && validImgs.length > 0) {
                 label={`Max ${maxMediaItems} media items • JPG max 1080×1080 (300 KB) • MP4 max 1080×1920 (60s, 15 MB)`}
               />
             </div>
+
+            <div className="w-full flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                aria-label="Save changes"
+                title={saving ? 'Saving...' : 'Save'}
+                style={{
+                  minWidth: 44,
+                  minHeight: 44,
+                  padding: 8,
+                  borderRadius: 8,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: 'none',
+                  backgroundColor: '#16a34a',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  opacity: saving ? 0.6 : 1,
+                  color: '#ffffff',
+                }}
+              >
+                <Check style={{ width: 18, height: 18, color: '#ffffff' }} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={saving}
+                aria-label="Cancel"
+                title="Cancel"
+                style={{
+                  minWidth: 44,
+                  minHeight: 44,
+                  padding: 8,
+                  borderRadius: 8,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: 'none',
+                  backgroundColor: '#9ca3af',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  opacity: saving ? 0.6 : 1,
+                  color: '#ffffff',
+                }}
+              >
+                <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
+              </button>
+            </div>
           </div>
 
           {/* RIGHT: preview */}
-          <div className="mt-8 md:mt-0 md:h-full md:flex md:justify-center">
-            <div className="w-full md:w-[340px] md:max-w-full md:h-full">
+          <div className="mt-8 md:mt-0 md:h-full md:flex md:justify-start">
+            <div className="w-full md:w-[320px] md:max-w-full md:h-full">
               <div className="mb-2 text-sm font-semibold text-gray-900">Deal Preview</div>
 
-              <div
-                className="bg-white border rounded-lg shadow-sm p-3 text-sm md:hidden"
-                style={{ borderColor: '#FBB345', borderWidth: 2 }}
-              >
-                <div
-                  className="font-extrabold text-base text-gray-900 mb-2 leading-tight"
-                  style={{
-                    whiteSpace: 'normal',
-                    overflowWrap: 'anywhere',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {edited.title || 'Deal title'}
-                </div>
-
-                <div className="mb-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    {previewImages.map((src, idx) => {
-                      const isPlaceholder = src === PLACEHOLDER_IMAGE;
-                      const showVideo = !isPlaceholder && isVideoUrl(src);
-                      const posterUrl = showVideo ? derivePosterUrl(src) : null;
-
-                      return (
-                        <div
-                          key={`mobile-${src}-${idx}`}
-                          className="w-full aspect-square rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
-                        >
-                          <img
-                            src={showVideo ? (posterUrl || PLACEHOLDER_IMAGE) : (src || PLACEHOLDER_IMAGE)}
-                            alt={showVideo ? `Deal poster ${idx + 1}` : `Deal media ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                            onError={e => {
-                              const t = e.target as HTMLImageElement;
-                              t.src = PLACEHOLDER_IMAGE;
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {activeDayAbbrs.length > 0 ? (
-                  <div className="mb-2 text-xs text-gray-700 leading-snug">
-                    <span className="font-bold text-gray-900">Valid:</span>{' '}
-                    {activeDayAbbrs.join(' • ')}
-                  </div>
-                ) : (
-                  <div className="mb-2 text-xs text-gray-500 leading-snug">
-                    Applies on all days within the deal dates.
-                  </div>
-                )}
-
-                <div className="mb-2 text-xs text-gray-700 break-words whitespace-normal leading-relaxed">
-                  {previewDescriptionText}
-                </div>
-
-                {previewDescriptionIsLong && (
-                  <div className="mb-3 text-sm font-semibold text-green-600">Read more</div>
-                )}
-
-                <div className="flex items-center gap-3 flex-wrap">
-                  {previewPrice && (
-                    <div className="font-extrabold text-2xl text-red-600">{previewPrice}</div>
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hidden md:flex md:h-full md:flex-col md:items-center">
+              <div className="flex h-full flex-col items-center">
                 <div className="w-full max-w-[320px] rounded-[34px] bg-[#f3f4f6] p-3 shadow-sm">
                   <div
-                    className="rounded-[30px] border bg-white p-4 text-sm md:min-h-[560px] md:flex md:flex-col"
+                    className="rounded-[30px] border bg-white p-4 text-sm min-h-[560px] flex flex-col"
                     style={{ borderColor: '#FBB345', borderWidth: 1 }}
                   >
                     <div
@@ -1020,7 +1001,7 @@ if (deal.id && validImgs.length > 0) {
 
                           return (
                             <div
-                              key={`desktop-${src}-${idx}`}
+                              key={`preview-${src}-${idx}`}
                               className="w-full aspect-square rounded-[22px] overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
                             >
                               <img
@@ -1103,107 +1084,6 @@ if (deal.id && validImgs.length > 0) {
           </div>
         </div>
 
-        <div className="mt-4 mb-0">
-          <div className="w-full flex justify-end gap-3 md:hidden">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              aria-label="Save changes"
-              title={saving ? 'Saving...' : 'Save'}
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                padding: 8,
-                borderRadius: 8,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                backgroundColor: '#16a34a',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
-                color: '#ffffff',
-              }}
-            >
-              <Check style={{ width: 18, height: 18, color: '#ffffff' }} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={saving}
-              aria-label="Cancel"
-              title="Cancel"
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                padding: 8,
-                borderRadius: 8,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                backgroundColor: '#9ca3af',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
-                color: '#ffffff',
-              }}
-            >
-              <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
-            </button>
-          </div>
-
-          <div className="w-full hidden md:flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              aria-label="Save changes"
-              title={saving ? 'Saving...' : 'Save'}
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                padding: 8,
-                borderRadius: 8,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                backgroundColor: '#16a34a',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
-                color: '#ffffff',
-              }}
-            >
-              <Check style={{ width: 18, height: 18, color: '#ffffff' }} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={saving}
-              aria-label="Cancel"
-              title="Cancel"
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                padding: 8,
-                borderRadius: 8,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                backgroundColor: '#9ca3af',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
-                color: '#ffffff',
-              }}
-            >
-              <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
-            </button>
-          </div>
-        </div>
       </div>
 
       {repeatModalOpen &&
@@ -1285,7 +1165,7 @@ if (deal.id && validImgs.length > 0) {
                         color: '#ffffff',
                       }}
                     >
-                      <Edit3 style={{ width: 18, height: 18, color: '#ffffff' }} />
+                      <Pencil className="w-[18px] h-[18px] text-white" />
                     </button>
                   </div>
 

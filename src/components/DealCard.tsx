@@ -664,12 +664,11 @@ setLoveCount(Number(countsRow?.love_count ?? 0));
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>{merchantName}</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{merchantName}</div>
 
           <div
             style={{
-              fontSize: 14,
-              fontWeight: 600,
+                            fontSize: 18, fontWeight: 800,
               whiteSpace: "normal",
               wordBreak: "break-word",
               overflowWrap: "break-word",

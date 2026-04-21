@@ -74,7 +74,6 @@ export const MerchantDashboardDeals = forwardRef<
           repeat
         `)
         .eq('merchant_id', merchantId)
-        .eq('is_active', true)
         .order('deal_number', { ascending: false });
 
       if (error) throw error;
