@@ -660,15 +660,6 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
               </div>
             )}
 
-            <div className="mt-4 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="w-full md:w-auto"
-              >
-                Maybe Later
-              </Button>
-            </div>
           </DialogContent>
         </Dialog>
 

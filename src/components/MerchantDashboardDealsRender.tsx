@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tag, Trash2, ThumbsUp, Heart, Pencil, Lock } from 'lucide-react';
+import { Tag, Trash2, ThumbsUp, Heart, Pencil, Lock, Plus } from 'lucide-react';
 import { EditDealDialog } from './EditDealDialog';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import { supabase } from '@/lib/supabase';
@@ -119,7 +119,10 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
             }
           >
             {canAdd ? (
-              'Add Deal'
+              <span className="flex items-center gap-2">
+                <Plus size={18} />
+                Add Deal
+              </span>
             ) : (
               <span className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />
@@ -135,15 +138,15 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
           const counts = engagementMap[deal.id] || { like: 0, love: 0 };
           const now = new Date();
 
-const endsAt = (deal as any).ends_at ? new Date((deal as any).ends_at) : null;
-const validUntil = (deal as any).valid_until ? new Date((deal as any).valid_until) : null;
+          const endsAt = (deal as any).ends_at ? new Date((deal as any).ends_at) : null;
+          const validUntil = (deal as any).valid_until ? new Date((deal as any).valid_until) : null;
 
-const isActive =
-  Boolean(deal.is_active) &&
-  (
-    (endsAt && endsAt > now) ||
-    (!endsAt && validUntil && validUntil > now)
-  );
+          const isActive =
+            Boolean(deal.is_active) &&
+            (
+              (endsAt && endsAt > now) ||
+              (!endsAt && validUntil && validUntil > now)
+            );
 
           return (
             <div
