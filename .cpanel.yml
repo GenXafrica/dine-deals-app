@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/dinedel2i3g4/public_html
+    - export DEPLOYPATH=/home/dinedel2i3g4/app.dinedeals.co.za
     - /bin/cp -R dist/* $DEPLOYPATH
