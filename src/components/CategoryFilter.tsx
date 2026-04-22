@@ -1,5 +1,6 @@
 // src/components/CategoryFilter.tsx
 import React, { useEffect, useState } from "react";
+import { RotateCcw, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
@@ -156,7 +157,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
       >
         <Button
           onClick={handleClear}
-          className="h-9 rounded-lg text-sm"
+          className="h-9 rounded-lg text-sm flex items-center gap-2"
           style={{
             background: "#10B981",
             color: "#fff",
@@ -165,12 +166,13 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
           }}
         >
-          Clear
+          <RotateCcw className="h-4 w-4" />
+          <span>Clear</span>
         </Button>
 
         <Button
           onClick={handleCloseKeep}
-          className="h-9 rounded-lg text-sm"
+          className="h-9 rounded-lg text-sm flex items-center gap-2"
           style={{
             background: "#EF4444",
             color: "#fff",
@@ -179,7 +181,8 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
           }}
         >
-          Close
+          <X className="h-4 w-4" />
+          <span>Close</span>
         </Button>
       </div>
 

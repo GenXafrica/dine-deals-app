@@ -1,7 +1,7 @@
 // src/components/EditDealDialog.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Check, X as IconX, Pencil, Plus, Globe, Phone, MessageCircle, Send } from 'lucide-react';
+import { Calendar, Check, X as IconX, Pencil, Plus, Globe, Phone, MessageCircle, Send, MapPin, Share2, UtensilsCrossed } from 'lucide-react';
 import { DealThumbnailUpload } from './DealThumbnailUpload';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -149,6 +149,11 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   const [currentDealId, setCurrentDealId] = useState<string | null>(null);
   const [planName, setPlanName] = useState<string>('Starter Course');
   const [maxMediaItems, setMaxMediaItems] = useState<number>(STARTER_MEDIA_LIMIT);
+  const [merchantAddressText, setMerchantAddressText] = useState<string>('');
+  const [merchantName, setMerchantName] = useState<string>('Restaurant name');
+  const [merchantLogo, setMerchantLogo] = useState<string>('');
+  const [merchantCategory, setMerchantCategory] = useState<string>('Restaurant');
+  const [merchantWebsiteText, setMerchantWebsiteText] = useState<string>('');
 
   // full-screen player state (merchant preview box only)
   // ref for inner scroll container
@@ -429,10 +434,50 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
       if (!merchantId) {
         setPlanName('Starter Course');
         setMaxMediaItems(STARTER_MEDIA_LIMIT);
+        setMerchantAddressText('');
+        setMerchantName('Restaurant name');
+        setMerchantLogo('');
+        setMerchantCategory('Restaurant');
+        setMerchantWebsiteText('');
         return;
       }
 
       try {
+        const { data: merchantRow, error: merchantError } = await supabase
+          .from('merchants')
+          .select('name, logo, category, website, address, google_address, subscription_plan_id, subscription_plans(name, features)')
+          .eq('id', merchantId)
+          .maybeSingle();
+
+        if (merchantError) {
+          console.warn('Could not load merchant preview data', merchantError);
+        }
+
+        const merchantAddress = [merchantRow?.address, merchantRow?.google_address]
+          .map(value => (typeof value === 'string' ? value.trim() : ''))
+          .find(Boolean) || '';
+        setMerchantAddressText(merchantAddress);
+        setMerchantName(
+          typeof merchantRow?.name === 'string' && merchantRow.name.trim()
+            ? merchantRow.name.trim()
+            : 'Restaurant name'
+        );
+        setMerchantLogo(
+          typeof merchantRow?.logo === 'string' && merchantRow.logo.trim()
+            ? merchantRow.logo.trim()
+            : ''
+        );
+        setMerchantCategory(
+          typeof merchantRow?.category === 'string' && merchantRow.category.trim()
+            ? merchantRow.category.trim()
+            : 'Restaurant'
+        );
+        setMerchantWebsiteText(
+          typeof merchantRow?.website === 'string' && merchantRow.website.trim()
+            ? merchantRow.website.trim()
+            : 'dinedeals.co.za'
+        );
+
         const { data: subscriptionRow, error: subscriptionError } = await supabase
           .from('subscriptions')
           .select('subscription_plans(name, features)')
@@ -459,16 +504,6 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
           return;
         }
 
-        const { data: merchantRow, error: merchantError } = await supabase
-          .from('merchants')
-          .select('subscription_plan_id, subscription_plans(name, features)')
-          .eq('id', merchantId)
-          .maybeSingle();
-
-        if (merchantError) {
-          console.warn('Could not load merchant fallback plan for media limit', merchantError);
-        }
-
         const merchantPlan = Array.isArray(merchantRow?.subscription_plans)
           ? merchantRow.subscription_plans[0]
           : merchantRow?.subscription_plans;
@@ -488,10 +523,15 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
         console.warn('Failed to load media limit plan, defaulting to Starter Course', error);
         setPlanName('Starter Course');
         setMaxMediaItems(STARTER_MEDIA_LIMIT);
+        setMerchantAddressText('');
+        setMerchantName('Restaurant name');
+        setMerchantLogo('');
+        setMerchantCategory('Restaurant');
+        setMerchantWebsiteText('dinedeals.co.za');
       }
     };
 
-    loadMerchantPlanAndLimit();
+        loadMerchantPlanAndLimit();
   }, [open]);
 
   useEffect(() => {
@@ -737,6 +777,10 @@ if (deal.id && validImgs.length > 0) {
   const previewDescriptionText = previewDescriptionIsLong
     ? `${previewDescription.slice(0, 140).trimEnd()}...`
     : previewDescription;
+  const previewDistanceText = '1.5 km';
+  const previewWebsite = merchantWebsiteText || 'dinedeals.co.za';
+  const previewCategory = merchantCategory || 'Restaurant';
+  const previewMerchantName = merchantName || 'Restaurant name';
 
   // Render portal modal when open
   if (!open || typeof document === 'undefined') return null;
@@ -976,13 +1020,78 @@ if (deal.id && validImgs.length > 0) {
               <div className="mb-2 text-sm font-semibold text-gray-900">Deal Preview</div>
 
               <div className="flex h-full flex-col items-center">
-                <div className="w-full max-w-[320px] rounded-[34px] bg-[#f3f4f6] p-3 shadow-sm">
-                  <div
-                    className="rounded-[30px] border bg-white p-4 text-sm min-h-[560px] flex flex-col"
-                    style={{ borderColor: '#FBB345', borderWidth: 1 }}
-                  >
+                <div className="w-full max-w-[320px] rounded-[34px] bg-[#f3f4f6] p-2.5 shadow-sm">
+                  <div className="mx-auto aspect-[9/16] w-full max-w-[300px] overflow-hidden rounded-[30px] bg-white px-3 py-2.5 text-sm flex flex-col">
+                    <div className="mb-2.5 flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <div className="h-[38px] w-[38px] shrink-0 overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5">
+                          {merchantLogo ? (
+                            <img
+                              src={merchantLogo}
+                              alt={previewMerchantName}
+                              className="h-full w-full object-cover"
+                              onError={e => {
+                                const t = e.target as HTMLImageElement;
+                                t.onerror = null;
+                                t.src = PLACEHOLDER_IMAGE;
+                              }}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-[#f3f4f6] text-gray-400">
+                              <UtensilsCrossed className="h-4 w-4" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div
+                            className="text-[12px] font-semibold leading-tight text-[#111827]"
+                            style={{
+                              whiteSpace: 'normal',
+                              overflowWrap: 'anywhere',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {previewMerchantName}
+                          </div>
+
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-normal text-[#6b7280]">
+                            <div className="flex min-w-0 items-center gap-1">
+                              <UtensilsCrossed className="h-3.5 w-3.5 shrink-0 text-[#D79A2B]" />
+                              <span className="truncate">{previewCategory}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#55b96c]" />
+                              <span>{previewDistanceText}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          aria-label="Share preview"
+                          className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-full bg-transparent p-0 text-[#111827]"
+                          tabIndex={-1}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label="Close preview"
+                          className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-full bg-transparent p-0 text-[#111827]"
+                          tabIndex={-1}
+                        >
+                          <IconX className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
                     <div
-                      className="font-extrabold text-2xl text-gray-900 mb-4 leading-tight"
+                      className="mb-2.5 text-[17px] font-extrabold leading-[1.15] text-[#111827]"
                       style={{
                         whiteSpace: 'normal',
                         overflowWrap: 'anywhere',
@@ -992,8 +1101,8 @@ if (deal.id && validImgs.length > 0) {
                       {edited.title || 'Deal title'}
                     </div>
 
-                    <div className="mb-4">
-                      <div className="grid grid-cols-3 gap-3">
+                    <div className="mb-1.5">
+                      <div className="grid grid-cols-3 gap-2">
                         {previewImages.map((src, idx) => {
                           const isPlaceholder = src === PLACEHOLDER_IMAGE;
                           const showVideo = !isPlaceholder && isVideoUrl(src);
@@ -1002,19 +1111,19 @@ if (deal.id && validImgs.length > 0) {
                           return (
                             <div
                               key={`preview-${src}-${idx}`}
-                              className="w-full aspect-square rounded-[22px] overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm relative"
+                              className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[14px] bg-gray-100"
                             >
                               <img
                                 src={showVideo ? (posterUrl || PLACEHOLDER_IMAGE) : (src || PLACEHOLDER_IMAGE)}
                                 alt={showVideo ? `Deal poster ${idx + 1}` : `Deal media ${idx + 1}`}
-                                className="w-full h-full object-cover"
+                                className="h-full w-full object-cover"
                                 onError={e => {
                                   const t = e.target as HTMLImageElement;
                                   t.src = PLACEHOLDER_IMAGE;
                                 }}
                               />
                               {showVideo && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-sm font-semibold">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-[11px] font-semibold text-white">
                                   Video
                                 </div>
                               )}
@@ -1024,60 +1133,66 @@ if (deal.id && validImgs.length > 0) {
                       </div>
                     </div>
 
+                    <div className="mb-2 text-center text-[10px] font-normal text-[#9ca3af]">
+                      Tap image to expand
+                    </div>
+
                     {activeDayAbbrs.length > 0 ? (
-                      <div className="mb-4 text-lg text-gray-700 leading-snug">
-                        <span className="font-bold text-gray-900">Valid:</span>{' '}
+                      <div className="mb-2 text-[11px] leading-snug text-[#4b5563]">
+                        <span className="font-semibold text-[#111827]">Valid:</span>{' '}
                         {activeDayAbbrs.join(' • ')}
                       </div>
                     ) : (
-                      <div className="mb-4 text-sm text-gray-500 leading-snug">
-                        Applies on all days within the deal dates.
+                      <div className="mb-2 text-[11px] leading-snug text-[#4b5563]">
+                        <span className="font-semibold text-[#111827]">Valid:</span> Every day
                       </div>
                     )}
 
-                    <div className="mb-3 text-lg text-gray-700 break-words whitespace-normal leading-relaxed">
+                    <div className="mb-1.5 text-[11px] leading-[1.35] text-[#4b5563] break-words whitespace-normal">
                       {previewDescriptionText}
                     </div>
 
-                    {previewDescriptionIsLong && (
-                      <div className="mb-6 text-base font-semibold text-green-600">Read more</div>
-                    )}
+                    <div className="mb-2.5 text-[11px] font-semibold text-[#61b46e]">
+                      Read more
+                    </div>
 
-                    <div className="flex items-center gap-3 mb-8 mt-auto flex-wrap">
-                      {previewPrice && (
-                        <div className="font-extrabold text-5xl leading-none text-red-600">
-                          {previewPrice.replace('.00', '')}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-base text-gray-500">
-                        <Calendar className="w-7 h-7 text-red-600" />
-                        <span>
+                    <div className="mt-auto mb-2 flex items-end gap-2 overflow-hidden">
+                      <div
+                        className="shrink-0 font-extrabold leading-none text-[#dc2626]"
+                        style={{ fontSize: '1.1rem' }}
+                      >
+                        {(previewPrice || 'R0').replace('.00', '')}
+                      </div>
+
+                      <div className="min-w-0 flex items-center gap-1 text-[10px] font-normal text-[#9ca3af]">
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-[#d97706]" />
+                        <span className="truncate whitespace-nowrap">
                           {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
                         </span>
                       </div>
                     </div>
 
-                    <div className="mb-8 flex items-center gap-2 text-xl text-[#3366cc] break-all">
-                      <Globe className="w-6 h-6 shrink-0" />
-                      <span>dinedeals.co.za</span>
+                    <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-normal text-[#4f6fd6] break-words">
+                      <Globe className="h-3.5 w-3.5 shrink-0" />
+                      <span>{previewWebsite}</span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="h-20 rounded-[22px] bg-[#e42320] shadow-sm flex items-center justify-center">
-                        <Phone className="w-9 h-9 text-white" />
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex h-[44px] items-center justify-center rounded-[12px] bg-[#e42320] shadow-sm">
+                        <Phone className="h-5 w-5 text-white" />
                       </div>
-                      <div className="h-20 rounded-[22px] bg-[#1fad4b] shadow-sm flex items-center justify-center">
-                        <MessageCircle className="w-9 h-9 text-white" />
+                      <div className="flex h-[44px] items-center justify-center rounded-[12px] bg-[#1fad4b] shadow-sm">
+                        <MessageCircle className="h-5 w-5 text-white" />
                       </div>
-                      <div className="h-20 rounded-[22px] bg-[#db7d07] shadow-sm flex items-center justify-center">
-                        <Send className="w-9 h-9 text-white" />
+                      <div className="flex h-[44px] items-center justify-center rounded-[12px] bg-[#db7d07] shadow-sm">
+                        <Send className="h-5 w-5 text-white" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 text-center text-xs text-gray-500">
-                  Customer screen may have small layout changes.
+                <div className="mt-2 text-center text-xs text-gray-500">
+                  Customer screen may have small layout changes
                 </div>
               </div>
             </div>
