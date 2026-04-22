@@ -985,7 +985,7 @@ if (deal.id && validImgs.length > 0) {
                   color: '#ffffff',
                 }}
               >
-                <Check style={{ width: 18, height: 18, color: '#ffffff' }} />
+                <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Accept</span>
               </button>
 
               <button
@@ -1009,7 +1009,7 @@ if (deal.id && validImgs.length > 0) {
                   color: '#ffffff',
                 }}
               >
-                <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
+                <span style={{display:"flex",alignItems:"center",gap:6}}><IconX style={{ width: 18, height: 18, color: "#ffffff" }} /> Cancel</span>
               </button>
             </div>
           </div>
@@ -1319,7 +1319,7 @@ if (deal.id && validImgs.length > 0) {
                             color: '#ffffff',
                           }}
                         >
-                          <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
+                          <span style={{display:"flex",alignItems:"center",gap:6}}><IconX style={{ width: 18, height: 18, color: "#ffffff" }} /> Cancel</span>
                         </button>
                       </div>
                     ))}
@@ -1355,7 +1355,7 @@ if (deal.id && validImgs.length > 0) {
                       color: '#ffffff',
                     }}
                   >
-                    <Check style={{ width: 18, height: 18, color: '#ffffff' }} />
+                    <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Accept</span>
                   </button>
 
                   <button
@@ -1377,7 +1377,7 @@ if (deal.id && validImgs.length > 0) {
                       color: '#ffffff',
                     }}
                   >
-                    <IconX style={{ width: 18, height: 18, color: '#ffffff' }} />
+                    <span style={{display:"flex",alignItems:"center",gap:6}}><IconX style={{ width: 18, height: 18, color: "#ffffff" }} /> Cancel</span>
                   </button>
                 </div>
               </div>
