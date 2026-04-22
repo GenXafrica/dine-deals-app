@@ -1,0 +1,122 @@
+// public/sw.js
+// Defensive service worker: avoids uncaught clients.claim() errors
+// Replace your existing public/sw.js with this file and save.
+
+const CACHE_NAME = 'dine-deals-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/src/main.tsx',
+  '/src/index.css'
+];
+
+let isDesktopView = false;
+
+// Listen for messages from main thread about device type
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_DEVICE_TYPE') {
+    isDesktopView = event.data.isDesktop;
+    console.log('Service worker received device type:', isDesktopView ? 'desktop' : 'mobile');
+  }
+});
+
+// Install: open cache (desktop may pre-cache)
+self.addEventListener('install', (event) => {
+  console.log('Service worker installing, desktop view:', isDesktopView);
+
+  if (isDesktopView) {
+    event.waitUntil(
+      caches.open(CACHE_NAME)
+        .then((cache) => {
+          console.log('Desktop detected: Pre-caching assets');
+          return cache.addAll(urlsToCache);
+        })
+        .catch((error) => {
+          console.warn('Desktop pre-caching failed (ignored):', error);
+        })
+    );
+  } else {
+    // mobile: open cache but do not aggressively pre-cache
+    event.waitUntil(
+      caches.open(CACHE_NAME)
+        .then(() => {
+          console.log('Mobile detected: Skipping pre-cache, using runtime caching only');
+        })
+        .catch((err) => {
+          console.warn('Open cache failed during install (ignored):', err);
+        })
+    );
+  }
+
+  // Do NOT call skipWaiting() here to avoid forcing activation/claim races.
+});
+
+// Activate: cleanup old caches and TRY to claim clients but swallow any failures
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+          return Promise.resolve();
+        })
+      );
+      console.log('Activate: cache cleanup complete');
+    } catch (err) {
+      console.warn('Activate cache cleanup error (ignored):', err);
+    }
+
+    // Attempt to claim clients but never throw an uncaught rejection.
+    try {
+      if (self.clients && typeof self.clients.claim === 'function') {
+        const claimPromise = self.clients.claim();
+        if (claimPromise && typeof claimPromise.then === 'function') {
+          claimPromise.then(
+            () => console.log('clients.claim() succeeded'),
+            (err) => console.warn('clients.claim() rejected (ignored):', err)
+          );
+        }
+      }
+    } catch (err) {
+      // swallow any synchronous errors
+      console.warn('clients.claim() threw synchronously (ignored):', err);
+    }
+  })());
+});
+
+// Fetch: cache-first for same-origin GETs, fallback to network
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith((async () => {
+    try {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+
+      const response = await fetch(event.request);
+      if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        // Cache the response asynchronously; swallow any cache errors.
+        (async () => {
+          try {
+            const responseToCache = response.clone();
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, responseToCache);
+          } catch (err) {
+            console.warn('Cache put failed (ignored):', err);
+          }
+        })();
+      }
+      return response;
+    } catch (err) {
+      console.warn('Fetch handler error (ignored):', err);
+      if (event.request.destination === 'document') {
+        const cachedIndex = await caches.match('/');
+        return cachedIndex || Response.error();
+      }
+      return Response.error();
+    }
+  })());
+});
