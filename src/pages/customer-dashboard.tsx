@@ -160,8 +160,11 @@ export default function CustomerDashboard(): JSX.Element {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [locationLabel, setLocationLabel] = useState<string>(() => {
-    if (typeof window === "undefined") return "Current location";
-    return window.sessionStorage.getItem("dd_customer_location_label") || "Current location";
+    try {
+      return sessionStorage.getItem("dd_current_location_label") || "Current location";
+    } catch {
+      return "Current location";
+    }
   });
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
@@ -247,19 +250,49 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
-  const applyResolvedLocationLabel = (value: string | null | undefined) => {
-    const nextValue = String(value || "").trim();
-
-    if (!nextValue) {
-      setLocationLabel("Current location");
-      return;
-    }
+  const saveLocationLabel = (value: string) => {
+    const nextValue = value?.trim() || "Current location";
 
     setLocationLabel(nextValue);
 
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("dd_customer_location_label", nextValue);
+    try {
+      sessionStorage.setItem("dd_current_location_label", nextValue);
+    } catch {}
+  };
+
+  const getBestGoogleAddressPart = (results: any[] = []) => {
+    const preferredTypes = [
+      "sublocality_level_1",
+      "sublocality",
+      "neighborhood",
+      "locality",
+      "postal_town",
+      "administrative_area_level_2",
+      "administrative_area_level_1",
+    ];
+
+    for (const preferredType of preferredTypes) {
+      for (const result of results) {
+        const components = Array.isArray(result?.address_components) ? result.address_components : [];
+
+        const match = components.find((component: any) =>
+          Array.isArray(component?.types) && component.types.includes(preferredType)
+        );
+
+        if (match?.long_name) {
+          return String(match.long_name).trim();
+        }
+      }
     }
+
+    for (const result of results) {
+      if (result?.formatted_address) {
+        const firstPart = String(result.formatted_address).split(",")[0]?.trim();
+        if (firstPart) return firstPart;
+      }
+    }
+
+    return null;
   };
 
   const resolveLocationName = async (latitude: number, longitude: number) => {
@@ -269,47 +302,19 @@ export default function CustomerDashboard(): JSX.Element {
       try {
         const geocoder = new googleMaps.Geocoder();
         const googleLabel = await new Promise<string | null>((resolve) => {
-          geocoder.geocode(
-            { location: { lat: latitude, lng: longitude } },
-            (results: any[] | null, status: string) => {
-              if (status !== "OK" || !results?.length) {
-                resolve(null);
-                return;
-              }
-
-              for (const result of results) {
-                const components = result?.address_components ?? [];
-                const findLongName = (type: string) => {
-                  const match = components.find((component: any) =>
-                    Array.isArray(component?.types) && component.types.includes(type)
-                  );
-
-                  return match?.long_name ?? null;
-                };
-
-                const label =
-                  findLongName("sublocality_level_1") ||
-                  findLongName("sublocality") ||
-                  findLongName("locality") ||
-                  findLongName("neighborhood") ||
-                  findLongName("administrative_area_level_2") ||
-                  result?.formatted_address?.split(",")?.[0] ||
-                  null;
-
-                if (label) {
-                  resolve(String(label).trim());
-                  return;
-                }
-              }
-
+          geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any, status: string) => {
+            if (status !== "OK" || !results?.length) {
               resolve(null);
+              return;
             }
-          );
+
+            resolve(getBestGoogleAddressPart(results));
+          });
         });
 
         if (googleLabel) {
-          applyResolvedLocationLabel(googleLabel);
-          return;
+          saveLocationLabel(googleLabel);
+          return googleLabel;
         }
       } catch {}
     }
@@ -329,8 +334,8 @@ export default function CustomerDashboard(): JSX.Element {
           null;
 
         if (bigDataName) {
-          applyResolvedLocationLabel(bigDataName);
-          return;
+          saveLocationLabel(String(bigDataName));
+          return String(bigDataName);
         }
       }
     } catch {}
@@ -363,27 +368,41 @@ export default function CustomerDashboard(): JSX.Element {
         data?.display_name?.split(",")?.[0] ||
         null;
 
-      applyResolvedLocationLabel(fallbackName);
-    } catch {
-      applyResolvedLocationLabel(null);
-    }
+      if (fallbackName) {
+        saveLocationLabel(String(fallbackName));
+        return String(fallbackName);
+      }
+    } catch {}
+
+    try {
+      const existing = sessionStorage.getItem("dd_current_location_label");
+      if (existing?.trim()) {
+        setLocationLabel(existing.trim());
+        return existing.trim();
+      }
+    } catch {}
+
+    setLocationLabel("Current location");
+    return null;
   };
 
-  const requestCurrentLocation = () => {
+  const requestCurrentLocation = (showLoadingLabel: boolean = true) => {
     if (!("geolocation" in navigator)) {
       setError("Geolocation not supported in this browser.");
       setLocationLabel("Current location");
       return;
     }
 
-    setLocationLabel("Locating...");
+    if (showLoadingLabel) {
+      setLocationLabel("Locating...");
+    }
 
     let isFinished = false;
 
     const failSafe = window.setTimeout(() => {
       if (isFinished) return;
       isFinished = true;
-      setLocationLabel("Current location");
+      setLocationLabel((current) => (current === "Locating..." ? "Current location" : current));
     }, 8000);
 
     navigator.geolocation.getCurrentPosition(
@@ -406,7 +425,7 @@ export default function CustomerDashboard(): JSX.Element {
         isFinished = true;
         window.clearTimeout(failSafe);
 
-        setLocationLabel("Current location");
+        setLocationLabel((current) => (current === "Locating..." ? "Current location" : current));
         setError("Unable to get location. Use test location or allow location.");
       },
       { maximumAge: 60000, timeout: 7000, enableHighAccuracy: true }
@@ -415,7 +434,7 @@ export default function CustomerDashboard(): JSX.Element {
 
   useEffect(() => {
     setTimeout(() => {
-      requestCurrentLocation();
+      requestCurrentLocation(false);
     }, 0);
   }, []);
 
@@ -1078,29 +1097,31 @@ export default function CustomerDashboard(): JSX.Element {
 
         <div
           style={{
-            marginTop: -2,
+            marginTop: -6,
             marginBottom: 8,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 12,
+            gap: 10,
             textAlign: "center",
           }}
         >
-          <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
             {locationLabel}
           </span>
 
           <button
             type="button"
-            onClick={requestCurrentLocation}
+            onClick={() => requestCurrentLocation(true)}
+            disabled={locationLabel === "Locating..."}
             style={{
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 500,
               color: "#2563EB",
               lineHeight: 1.2,
               background: "transparent",
               padding: 0,
+              opacity: locationLabel === "Locating..." ? 0.7 : 1,
             }}
           >
             Change
