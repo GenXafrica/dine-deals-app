@@ -159,7 +159,10 @@ export default function CustomerDashboard(): JSX.Element {
   const [showMap, setShowMap] = useState(false);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [locationLabel, setLocationLabel] = useState<string>("Current location");
+  const [locationLabel, setLocationLabel] = useState<string>(() => {
+    if (typeof window === "undefined") return "Current location";
+    return window.sessionStorage.getItem("dd_customer_location_label") || "Current location";
+  });
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt?: string } | null>(null);
@@ -244,7 +247,73 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
+  const applyResolvedLocationLabel = (value: string | null | undefined) => {
+    const nextValue = String(value || "").trim();
+
+    if (!nextValue) {
+      setLocationLabel("Current location");
+      return;
+    }
+
+    setLocationLabel(nextValue);
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("dd_customer_location_label", nextValue);
+    }
+  };
+
   const resolveLocationName = async (latitude: number, longitude: number) => {
+    const googleMaps = (window as any)?.google?.maps;
+
+    if (googleMaps?.Geocoder) {
+      try {
+        const geocoder = new googleMaps.Geocoder();
+        const googleLabel = await new Promise<string | null>((resolve) => {
+          geocoder.geocode(
+            { location: { lat: latitude, lng: longitude } },
+            (results: any[] | null, status: string) => {
+              if (status !== "OK" || !results?.length) {
+                resolve(null);
+                return;
+              }
+
+              for (const result of results) {
+                const components = result?.address_components ?? [];
+                const findLongName = (type: string) => {
+                  const match = components.find((component: any) =>
+                    Array.isArray(component?.types) && component.types.includes(type)
+                  );
+
+                  return match?.long_name ?? null;
+                };
+
+                const label =
+                  findLongName("sublocality_level_1") ||
+                  findLongName("sublocality") ||
+                  findLongName("locality") ||
+                  findLongName("neighborhood") ||
+                  findLongName("administrative_area_level_2") ||
+                  result?.formatted_address?.split(",")?.[0] ||
+                  null;
+
+                if (label) {
+                  resolve(String(label).trim());
+                  return;
+                }
+              }
+
+              resolve(null);
+            }
+          );
+        });
+
+        if (googleLabel) {
+          applyResolvedLocationLabel(googleLabel);
+          return;
+        }
+      } catch {}
+    }
+
     try {
       const bigDataResponse = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
@@ -260,7 +329,7 @@ export default function CustomerDashboard(): JSX.Element {
           null;
 
         if (bigDataName) {
-          setLocationLabel(String(bigDataName).trim());
+          applyResolvedLocationLabel(bigDataName);
           return;
         }
       }
@@ -294,9 +363,9 @@ export default function CustomerDashboard(): JSX.Element {
         data?.display_name?.split(",")?.[0] ||
         null;
 
-      setLocationLabel(fallbackName || "Current location");
+      applyResolvedLocationLabel(fallbackName);
     } catch {
-      setLocationLabel("Current location");
+      applyResolvedLocationLabel(null);
     }
   };
 
