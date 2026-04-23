@@ -1342,9 +1342,9 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Save repeat settings"
                     title="Save repeat settings"
                     style={{
-                      minWidth: 44,
-                      minHeight: 44,
-                      padding: 8,
+                      width: 120,
+                      height: 44,
+                      padding: 0,
                       borderRadius: 8,
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1364,9 +1364,9 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Cancel repeat changes"
                     title="Cancel repeat changes"
                     style={{
-                      minWidth: 44,
-                      minHeight: 44,
-                      padding: 8,
+                      width: 120,
+                      height: 44,
+                      padding: 0,
                       borderRadius: 8,
                       display: 'inline-flex',
                       alignItems: 'center',
