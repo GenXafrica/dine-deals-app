@@ -1332,7 +1332,7 @@ export default function CustomerDashboard(): JSX.Element {
         >
           <CustomerDealsViewRender
             deals={displayedDeals}
-            loading={loading}
+            loading={loading && deals.length > 0}
             radiusKm={radiusKm}
             selectedCategory={showAiTopPicks && aiCategory ? aiCategory : selectedCategory}
             showRadiusSelector={false}
