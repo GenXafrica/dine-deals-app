@@ -17,6 +17,8 @@ interface Deal {
   images?: string[] | null;
   image?: string | null;
   price?: number | null;
+  price_type?: 'amount' | 'text' | null;
+  price_text?: string | null;
   is_active: boolean;
   repeat?: any;
 }
@@ -68,6 +70,14 @@ const parseNumericFromDisplay = (s: string | null | undefined) => {
   const numeric = String(s).replace(/[^0-9.]/g, '');
   const n = numeric ? parseFloat(numeric) : null;
   return n === null || Number.isNaN(n) ? null : n;
+};
+
+const getInitialPriceMode = (deal: Deal): 'empty' | 'amount' | 'text' => {
+  if (deal.price_type === 'text' && (deal.price_text ?? '').trim()) return 'text';
+  if (deal.price_type === 'amount' && deal.price !== null && deal.price !== undefined) return 'amount';
+  if (deal.price !== null && deal.price !== undefined) return 'amount';
+  if ((deal.price_text ?? '').trim()) return 'text';
+  return 'empty';
 };
 
 const toDateInput = (iso?: string | null) => {
@@ -138,7 +148,9 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   const [edited, setEdited] = useState({
     title: '',
     description: '',
+    priceMode: 'empty' as 'empty' | 'amount' | 'text',
     displayPrice: '',
+    priceText: '',
     price: null as number | null,
     starts_at: '' as string,
     ends_at: '' as string,
@@ -391,11 +403,15 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
       repeatObj = ensureRepeatShape(null);
     }
 
+    const priceMode = getInitialPriceMode(deal);
+
     setEdited({
       title: deal.title ?? '',
       description: deal.description ?? '',
-      displayPrice: formatPriceForDisplay(deal.price),
-      price: deal.price ?? null,
+      priceMode,
+      displayPrice: priceMode === 'amount' ? formatPriceForDisplay(deal.price) : '',
+      priceText: priceMode === 'text' ? (deal.price_text ?? '') : '',
+      price: priceMode === 'amount' ? (deal.price ?? null) : null,
       starts_at: deal.starts_at ? toDateInput(deal.starts_at) : '',
       ends_at: deal.ends_at ? toDateInput(deal.ends_at) : '',
       images: imagesArr,
@@ -563,11 +579,32 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
       return;
     }
 
+    if (edited.priceMode === 'amount' && parseNumericFromDisplay(edited.displayPrice) === null) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid Rand price or leave the price empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (edited.priceMode === 'text' && !edited.priceText.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter the promo text or leave the price empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const p_starts_at = edited.starts_at ? toStartOfDayISO(edited.starts_at) : null;
       const p_ends_at = edited.ends_at ? toEndOfDayISO(edited.ends_at) : null;
-      const p_price = parseNumericFromDisplay(edited.displayPrice);
+      const cleanPriceText = edited.priceText.trim();
+      const p_price = edited.priceMode === 'amount' ? parseNumericFromDisplay(edited.displayPrice) : null;
+      const p_price_type = edited.priceMode === 'empty' ? null : edited.priceMode;
+      const p_price_text = edited.priceMode === 'text' ? cleanPriceText : null;
       const validImgs = (edited.images || []).filter(Boolean);
       const firstImage = validImgs.length ? validImgs[0] : null;
 
@@ -603,6 +640,8 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
           p_image: firstImage,
           p_is_active: true,
           p_repeat,
+          p_price_type,
+          p_price_text,
         });
         if (error) throw error;
 
@@ -664,10 +703,11 @@ const p_payload: any = {
   title: edited.title,
   description: edited.description,
   is_active: isActive,
+  price_type: p_price_type,
+  price: p_price,
+  price_text: p_price_text,
 };
 
-// only include if actually set
-if (p_price !== null) p_payload.price = p_price;
 if (p_starts_at) p_payload.starts_at = p_starts_at;
 if (p_ends_at) {
   p_payload.ends_at = p_ends_at;
@@ -740,7 +780,12 @@ if (deal.id && validImgs.length > 0) {
   };
 
   // preview values
-  const previewPrice = formatPriceForDisplay(edited.price);
+  const previewPrice =
+    edited.priceMode === 'text'
+      ? edited.priceText.trim()
+      : edited.priceMode === 'amount'
+        ? formatPriceForDisplay(parseNumericFromDisplay(edited.displayPrice))
+        : '';
   const previewExpiry = formatExpiryDate(edited.ends_at || edited.starts_at);
   const repeatShape = ensureRepeatShape(edited.repeat);
   const hasDays = repeatShape.days && repeatShape.days.length > 0;
@@ -854,22 +899,62 @@ if (deal.id && validImgs.length > 0) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Price (optional)</label>
-              <input
-                id="editDealPrice"
-                value={edited.displayPrice}
+
+              <select
+                value={edited.priceMode}
                 onChange={e => {
-                  const v = e.target.value;
-                  const numeric = v.replace(/[^0-9.]/g, '');
+                  const nextMode = e.target.value as 'empty' | 'amount' | 'text';
                   setEdited(prev => ({
                     ...prev,
-                    displayPrice: v,
-                    price: numeric ? parseFloat(numeric) : null,
+                    priceMode: nextMode,
+                    displayPrice: nextMode === 'amount' ? prev.displayPrice : '',
+                    priceText: nextMode === 'text' ? prev.priceText : '',
+                    price: nextMode === 'amount' ? prev.price : null,
                   }));
                 }}
-                placeholder="R199.95"
-                inputMode="decimal"
                 className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
-              />
+              >
+                <option value="empty">Leave empty</option>
+                <option value="amount">R price</option>
+                <option value="text">Promo text</option>
+              </select>
+
+              {edited.priceMode === 'amount' && (
+                <input
+                  id="editDealPrice"
+                  value={edited.displayPrice}
+                  onChange={e => {
+                    const v = e.target.value;
+                    const numeric = v.replace(/[^0-9.]/g, '');
+                    setEdited(prev => ({
+                      ...prev,
+                      displayPrice: v,
+                      price: numeric ? parseFloat(numeric) : null,
+                    }));
+                  }}
+                  placeholder="R199.95"
+                  inputMode="decimal"
+                  className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                />
+              )}
+
+              {edited.priceMode === 'text' && (
+                <input
+                  id="editDealPriceText"
+                  value={edited.priceText}
+                  onChange={e => {
+                    const nextPriceText = sanitizeAndTrim(e.target.value, 40);
+                    setEdited(prev => ({
+                      ...prev,
+                      priceText: nextPriceText,
+                      price: null,
+                      displayPrice: '',
+                    }));
+                  }}
+                  placeholder="50% Off or 2 for 1"
+                  className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                />
+              )}
             </div>
 
             <div>
@@ -1161,7 +1246,7 @@ if (deal.id && validImgs.length > 0) {
                         className="shrink-0 font-extrabold leading-none text-[#dc2626]"
                         style={{ fontSize: '1.1rem' }}
                       >
-                        {(previewPrice || 'R0').replace('.00', '')}
+                        {(previewPrice || '').replace('.00', '') || '—'}
                       </div>
 
                       <div className="min-w-0 flex items-center gap-1 text-[10px] font-normal text-[#9ca3af]">
