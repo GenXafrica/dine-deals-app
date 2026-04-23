@@ -411,6 +411,35 @@ const getRepeatDaysFromEntity = (entity: any): string[] => {
   return out;
 };
 
+
+
+const formatPrice = (price: number | string | null | undefined) => {
+  if (price === null || price === undefined || price === "") return "";
+  const numericPrice = typeof price === "number" ? price : Number(price);
+  if (!Number.isFinite(numericPrice)) return "";
+  try {
+    return new Intl.NumberFormat("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+      currencyDisplay: "narrowSymbol",
+    }).format(numericPrice);
+  } catch {
+    return `R${numericPrice}`;
+  }
+};
+
+const getDisplayPrice = (deal: any) => {
+  if (!deal) return "";
+
+  const priceType = typeof deal.price_type === "string" ? deal.price_type.trim() : "";
+  const priceText = typeof deal.price_text === "string" ? deal.price_text.trim() : "";
+
+  if (priceType === "text" && priceText) return priceText;
+  if (priceText && !priceType && (deal.price == null || deal.price === "")) return priceText;
+
+  return formatPrice(deal.price ?? null);
+};
+
 const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
   deal,
   onClose,
@@ -675,7 +704,8 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
 
   const addressTitle = addressToShow ? addressToShow : "Address not set";
   const addressMapQuery = streetAddress ? streetAddress : typeof lat === "number" && typeof lng === "number" ? `${lat},${lng}` : "";
-  const showPrice = deal.price != null && deal.price !== "";
+  const displayPrice = getDisplayPrice(deal);
+  const showPrice = displayPrice !== "";
 
   const configuredShortDays = new Set<string>();
   const shortRepeatKeys: [string, string][] = [
@@ -1143,7 +1173,7 @@ const ExpandedDealView: React.FC<ExpandedDealViewProps> = ({
         )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          {showPrice && <div style={{ fontWeight: 800, color: "#dc2626", fontSize: 32 }}>{`R${deal.price}`}</div>}
+          {showPrice && <div style={{ fontWeight: 800, color: "#dc2626", fontSize: 32 }}>{displayPrice}</div>}
 
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6b7280", fontSize: 13 }}>
             <Calendar style={{ width: 22, height: 22, color: "#DC2626" }} />

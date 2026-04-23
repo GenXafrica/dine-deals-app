@@ -27,6 +27,8 @@ type Deal = {
   title?: string;
   description?: string;
   price?: number | null;
+  price_type?: string | null;
+  price_text?: string | null;
   images?: any;
   image?: string | null;
   image_url?: string | null;
@@ -312,6 +314,18 @@ function formatPrice(price: number | null) {
   } catch {
     return `R${price}`;
   }
+}
+
+function getDisplayPrice(deal: Deal | null) {
+  if (!deal) return "";
+
+  const priceType = typeof deal.price_type === "string" ? deal.price_type.trim() : "";
+  const priceText = typeof deal.price_text === "string" ? deal.price_text.trim() : "";
+
+  if (priceType === "text" && priceText) return priceText;
+  if (priceText && (priceType === "" || priceType == null) && (deal.price == null)) return priceText;
+
+  return formatPrice(deal.price ?? null);
 }
 
 export default function DealCard(props: Props) {
@@ -617,6 +631,7 @@ setLoveCount(Number(countsRow?.love_count ?? 0));
   };
 
   const expiryDate = d.valid_until ? formatDateZA(d.valid_until) : null;
+  const displayPrice = getDisplayPrice(d);
 
   return (
     <article
@@ -808,7 +823,7 @@ setLoveCount(Number(countsRow?.love_count ?? 0));
               flexShrink: 0,
             }}
           >
-            {formatPrice(d.price ?? null)}
+            {displayPrice}
           </div>
 
           <div
