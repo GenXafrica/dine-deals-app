@@ -295,67 +295,147 @@ export default function CustomerDashboard(): JSX.Element {
     return null;
   };
 
-  const resolveLocationName = async (latitude: number, longitude: number) => {
-    const googleMaps = (window as any)?.google?.maps;
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+    return await new Promise<T>((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => reject(new Error("timeout")), timeoutMs);
 
-    if (googleMaps?.Geocoder) {
-      try {
-        const geocoder = new googleMaps.Geocoder();
-        const googleLabel = await new Promise<string | null>((resolve) => {
-          geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any, status: string) => {
-            if (status !== "OK" || !results?.length) {
-              resolve(null);
+      promise.then(
+        (value) => {
+          window.clearTimeout(timeoutId);
+          resolve(value);
+        },
+        (error) => {
+          window.clearTimeout(timeoutId);
+          reject(error);
+        }
+      );
+    });
+  };
+
+  const fetchJsonWithTimeout = async (url: string, timeoutMs: number) => {
+    const controller = new AbortController();
+    const abortId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "Accept-Language": "en",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("request_failed");
+      }
+
+      return await response.json();
+    } finally {
+      window.clearTimeout(abortId);
+    }
+  };
+
+  const loadGoogleMapsIfNeeded = async () => {
+    const existingGoogleMaps = (window as any)?.google?.maps;
+
+    if (existingGoogleMaps?.Geocoder) {
+      return existingGoogleMaps;
+    }
+
+    const apiKey = (import.meta as any)?.env?.VITE_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      return null;
+    }
+
+    const existingScript = document.getElementById("dd-google-maps-geocoder");
+
+    if (existingScript) {
+      return await withTimeout(
+        new Promise<any>((resolve) => {
+          const waitForGoogle = () => {
+            const maps = (window as any)?.google?.maps;
+            if (maps?.Geocoder) {
+              resolve(maps);
               return;
             }
 
-            resolve(getBestGoogleAddressPart(results));
-          });
-        });
+            window.setTimeout(waitForGoogle, 100);
+          };
+
+          waitForGoogle();
+        }),
+        4000
+      ).catch(() => null);
+    }
+
+    return await withTimeout(
+      new Promise<any>((resolve) => {
+        const script = document.createElement("script");
+        script.id = "dd-google-maps-geocoder";
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => resolve((window as any)?.google?.maps ?? null);
+        script.onerror = () => resolve(null);
+        document.head.appendChild(script);
+      }),
+      4000
+    ).catch(() => null);
+  };
+
+  const resolveLocationName = async (latitude: number, longitude: number) => {
+    try {
+      const googleMaps = await loadGoogleMapsIfNeeded();
+
+      if (googleMaps?.Geocoder) {
+        const geocoder = new googleMaps.Geocoder();
+        const googleLabel = await withTimeout(
+          new Promise<string | null>((resolve) => {
+            geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any, status: string) => {
+              if (status !== "OK" || !results?.length) {
+                resolve(null);
+                return;
+              }
+
+              resolve(getBestGoogleAddressPart(results));
+            });
+          }),
+          4000
+        ).catch(() => null);
 
         if (googleLabel) {
           saveLocationLabel(googleLabel);
           return googleLabel;
         }
-      } catch {}
-    }
-
-    try {
-      const bigDataResponse = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-
-      if (bigDataResponse.ok) {
-        const bigData = await bigDataResponse.json();
-        const bigDataName =
-          bigData?.locality ||
-          bigData?.localityName ||
-          bigData?.city ||
-          bigData?.principalSubdivision ||
-          null;
-
-        if (bigDataName) {
-          saveLocationLabel(String(bigDataName));
-          return String(bigDataName);
-        }
       }
     } catch {}
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
-        {
-          headers: {
-            Accept: "application/json",
-            "Accept-Language": "en",
-          },
-        }
+      const bigData = await fetchJsonWithTimeout(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+        3500
       );
 
-      if (!response.ok) {
-        throw new Error("reverse_geocode_failed");
-      }
+      const bigDataName =
+        bigData?.locality ||
+        bigData?.localityName ||
+        bigData?.city ||
+        bigData?.principalSubdivision ||
+        null;
 
-      const data = await response.json();
+      if (bigDataName) {
+        saveLocationLabel(String(bigDataName));
+        return String(bigDataName);
+      }
+    } catch {}
+
+    try {
+      const data = await fetchJsonWithTimeout(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+        3500
+      );
+
       const address = data?.address ?? {};
       const fallbackName =
         address?.suburb ||
@@ -376,9 +456,10 @@ export default function CustomerDashboard(): JSX.Element {
 
     try {
       const existing = sessionStorage.getItem("dd_current_location_label");
-      if (existing?.trim()) {
-        setLocationLabel(existing.trim());
-        return existing.trim();
+      if (existing?.trim() && existing.trim() !== "Current location") {
+        const cached = existing.trim();
+        setLocationLabel(cached);
+        return cached;
       }
     } catch {}
 
