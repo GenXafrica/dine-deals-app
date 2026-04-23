@@ -1146,7 +1146,6 @@ export default function CustomerDashboard(): JSX.Element {
           pointerEvents: showAccountSheet ? "none" : "auto",
         }}
       >
-        {loading && deals.length === 0 ? <LoadingOverlay /> : null}
 
         <Masthead
           logoSrc="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-192.png"
@@ -1332,7 +1331,7 @@ export default function CustomerDashboard(): JSX.Element {
         >
           <CustomerDealsViewRender
             deals={displayedDeals}
-            loading={loading && deals.length > 0}
+            loading={loading}
             radiusKm={radiusKm}
             selectedCategory={showAiTopPicks && aiCategory ? aiCategory : selectedCategory}
             showRadiusSelector={false}
