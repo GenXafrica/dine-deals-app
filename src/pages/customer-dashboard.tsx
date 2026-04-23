@@ -97,6 +97,67 @@ function getAiCategoryPick(choice: AiMoodOption): AiPickResult {
   return selected;
 }
 
+
+async function resolveReadableLocationName(latitude: number, longitude: number): Promise<string> {
+  const tryExtractName = (data: any): string | null => {
+    const address = data?.address ?? {};
+
+    const informativeItems = Array.isArray(data?.localityInfo?.informative)
+      ? data.localityInfo.informative
+      : [];
+
+    const informativeName =
+      informativeItems.find((item: any) =>
+        ["suburb", "city_district", "neighbourhood", "residential"].includes(item?.description)
+      )?.name ?? null;
+
+    const candidates = [
+      data?.locality,
+      informativeName,
+      address.suburb,
+      address.neighbourhood,
+      address.residential,
+      address.city_district,
+      address.town,
+      address.city,
+      address.village,
+      address.hamlet,
+      data?.city,
+      data?.principalSubdivision,
+      data?.name,
+      typeof data?.display_name === "string" ? data.display_name.split(",")[0]?.trim() : null,
+    ];
+
+    return (candidates.find((value) => typeof value === "string" && value.trim()) as string | undefined) ?? null;
+  };
+
+  const sources = [
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+  ];
+
+  for (const url of sources) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "Accept-Language": "en",
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const name = tryExtractName(data);
+
+      if (name) return name;
+    } catch {}
+  }
+
+  return "Current location";
+}
+
+
 export default function CustomerDashboard(): JSX.Element {
   const navigate = useNavigate();
 
@@ -279,44 +340,10 @@ export default function CustomerDashboard(): JSX.Element {
     let cancelled = false;
 
     const resolveLocationName = async () => {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`,
-          {
-            headers: {
-              Accept: "application/json",
-              "Accept-Language": "en",
-            },
-          }
-        );
+      const resolvedName = await resolveReadableLocationName(lat, lng);
 
-        if (!response.ok) {
-          throw new Error("reverse_geocode_failed");
-        }
-
-        const data = await response.json();
-        const address = data?.address ?? {};
-
-        const primaryName =
-          address.suburb ||
-          address.neighbourhood ||
-          address.residential ||
-          address.city_district ||
-          address.town ||
-          address.city ||
-          address.village ||
-          address.hamlet ||
-          data?.name ||
-          data?.display_name?.split(",")?.[0] ||
-          null;
-
-        if (!cancelled) {
-          setLocationLabel(primaryName || "Current location");
-        }
-      } catch {
-        if (!cancelled) {
-          setLocationLabel("Current location");
-        }
+      if (!cancelled) {
+        setLocationLabel(resolvedName);
       }
     };
 
@@ -984,18 +1011,18 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <section style={{ marginTop: -2, marginBottom: 8 }}>
+        <section style={{ marginTop: -12, marginBottom: 8 }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 10,
+              gap: 8,
               marginBottom: 8,
               textAlign: "center",
             }}
           >
-            <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
               {locationLabel}
             </span>
 
@@ -1009,6 +1036,7 @@ export default function CustomerDashboard(): JSX.Element {
                 lineHeight: 1.2,
                 background: "transparent",
                 padding: 0,
+                cursor: "pointer",
               }}
             >
               Change
