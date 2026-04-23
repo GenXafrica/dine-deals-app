@@ -985,7 +985,7 @@ if (deal.id && validImgs.length > 0) {
                   color: '#ffffff',
                 }}
               >
-                <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Accept</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Save</span>
               </button>
 
               <button
@@ -1355,7 +1355,7 @@ if (deal.id && validImgs.length > 0) {
                       color: '#ffffff',
                     }}
                   >
-                    <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Accept</span>
+                    <span style={{display:"flex",alignItems:"center",gap:6}}><Check style={{ width: 18, height: 18, color: "#ffffff" }} /> Save</span>
                   </button>
 
                   <button
