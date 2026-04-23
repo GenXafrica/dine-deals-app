@@ -97,6 +97,33 @@ function getAiCategoryPick(choice: AiMoodOption): AiPickResult {
   return selected;
 }
 
+function formatCurrentLocationLabel(address: Record<string, any> | null | undefined): string {
+  if (!address) return "Current location";
+
+  const suburb =
+    address.suburb ||
+    address.neighbourhood ||
+    address.residential ||
+    address.quarter ||
+    address.city_district;
+
+  const city =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.county;
+
+  if (suburb && city && suburb !== city) {
+    return `${suburb}, ${city}`;
+  }
+
+  if (suburb) return String(suburb);
+  if (city) return String(city);
+
+  return "Current location";
+}
+
 export default function CustomerDashboard(): JSX.Element {
   const navigate = useNavigate();
 
@@ -184,6 +211,7 @@ export default function CustomerDashboard(): JSX.Element {
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties | null>(null);
 
   const [customerFullName, setCustomerFullName] = useState<string | null>(null);
+  const [currentLocationLabel, setCurrentLocationLabel] = useState<string>("Current location");
 
   const [showAccountSheet, setShowAccountSheet] = useState(false);
   const openAccountSheet = () => {
@@ -243,20 +271,55 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
+  const updateCurrentLocationLabel = async (latitude: number, longitude: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setCurrentLocationLabel("Current location");
+        return;
+      }
+
+      const data = await response.json();
+      const label = formatCurrentLocationLabel(data?.address);
+
+      setCurrentLocationLabel(label || "Current location");
+    } catch {
+      setCurrentLocationLabel("Current location");
+    }
+  };
+
   const requestCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
       setError("Geolocation not supported in this browser.");
+      setCurrentLocationLabel("Current location");
       return;
     }
 
+    setCurrentLocationLabel("Updating location...");
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(pos.coords.latitude);
-        setLng(pos.coords.longitude);
+        const nextLat = pos.coords.latitude;
+        const nextLng = pos.coords.longitude;
+
+        setLat(nextLat);
+        setLng(nextLng);
         setError(null);
+        updateCurrentLocationLabel(nextLat, nextLng);
       },
-      () => setError("Unable to get location. Use test location or allow location."),
-      { maximumAge: 60000, timeout: 7000 }
+      () => {
+        setCurrentLocationLabel("Current location");
+        setError("Unable to get location. Use test location or allow location.");
+      },
+      { maximumAge: 60000, timeout: 7000, enableHighAccuracy: true }
     );
   };
 
@@ -929,13 +992,13 @@ export default function CustomerDashboard(): JSX.Element {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
-              marginBottom: 10,
+              gap: 10,
+              marginBottom: 8,
               textAlign: "center",
             }}
           >
-            <span style={{ fontSize: 16, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
-              Current location
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+              {currentLocationLabel}
             </span>
 
             <button
@@ -948,6 +1011,7 @@ export default function CustomerDashboard(): JSX.Element {
                 lineHeight: 1.2,
                 background: "transparent",
                 padding: 0,
+                cursor: "pointer",
               }}
             >
               Change
