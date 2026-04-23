@@ -97,33 +97,6 @@ function getAiCategoryPick(choice: AiMoodOption): AiPickResult {
   return selected;
 }
 
-function formatCurrentLocationLabel(address: Record<string, any> | null | undefined): string {
-  if (!address) return "Current location";
-
-  const suburb =
-    address.suburb ||
-    address.neighbourhood ||
-    address.residential ||
-    address.quarter ||
-    address.city_district;
-
-  const city =
-    address.city ||
-    address.town ||
-    address.village ||
-    address.municipality ||
-    address.county;
-
-  if (suburb && city && suburb !== city) {
-    return `${suburb}, ${city}`;
-  }
-
-  if (suburb) return String(suburb);
-  if (city) return String(city);
-
-  return "Current location";
-}
-
 export default function CustomerDashboard(): JSX.Element {
   const navigate = useNavigate();
 
@@ -186,6 +159,7 @@ export default function CustomerDashboard(): JSX.Element {
   const [showMap, setShowMap] = useState(false);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  const [locationLabel, setLocationLabel] = useState("Current location");
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt?: string } | null>(null);
@@ -211,7 +185,6 @@ export default function CustomerDashboard(): JSX.Element {
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties | null>(null);
 
   const [customerFullName, setCustomerFullName] = useState<string | null>(null);
-  const [currentLocationLabel, setCurrentLocationLabel] = useState<string>("Current location");
 
   const [showAccountSheet, setShowAccountSheet] = useState(false);
   const openAccountSheet = () => {
@@ -271,55 +244,26 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
-  const updateCurrentLocationLabel = async (latitude: number, longitude: number) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        setCurrentLocationLabel("Current location");
-        return;
-      }
-
-      const data = await response.json();
-      const label = formatCurrentLocationLabel(data?.address);
-
-      setCurrentLocationLabel(label || "Current location");
-    } catch {
-      setCurrentLocationLabel("Current location");
-    }
-  };
-
   const requestCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
       setError("Geolocation not supported in this browser.");
-      setCurrentLocationLabel("Current location");
+      setLocationLabel("Current location");
       return;
     }
 
-    setCurrentLocationLabel("Updating location...");
+    setLocationLabel("Locating...");
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const nextLat = pos.coords.latitude;
-        const nextLng = pos.coords.longitude;
-
-        setLat(nextLat);
-        setLng(nextLng);
+        setLat(pos.coords.latitude);
+        setLng(pos.coords.longitude);
         setError(null);
-        updateCurrentLocationLabel(nextLat, nextLng);
       },
       () => {
-        setCurrentLocationLabel("Current location");
+        setLocationLabel("Current location");
         setError("Unable to get location. Use test location or allow location.");
       },
-      { maximumAge: 60000, timeout: 7000, enableHighAccuracy: true }
+      { maximumAge: 60000, timeout: 7000 }
     );
   };
 
@@ -328,6 +272,60 @@ export default function CustomerDashboard(): JSX.Element {
       requestCurrentLocation();
     }, 0);
   }, []);
+
+  useEffect(() => {
+    if (lat === null || lng === null) return;
+
+    let cancelled = false;
+
+    const resolveLocationName = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`,
+          {
+            headers: {
+              Accept: "application/json",
+              "Accept-Language": "en",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("reverse_geocode_failed");
+        }
+
+        const data = await response.json();
+        const address = data?.address ?? {};
+
+        const primaryName =
+          address.suburb ||
+          address.neighbourhood ||
+          address.residential ||
+          address.city_district ||
+          address.town ||
+          address.city ||
+          address.village ||
+          address.hamlet ||
+          data?.name ||
+          data?.display_name?.split(",")?.[0] ||
+          null;
+
+        if (!cancelled) {
+          setLocationLabel(primaryName || "Current location");
+        }
+      } catch {
+        if (!cancelled) {
+          setLocationLabel("Current location");
+        }
+      }
+    };
+
+    resolveLocationName();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lat, lng]);
 
   useEffect(() => {
     let mounted = true;
@@ -966,7 +964,7 @@ export default function CustomerDashboard(): JSX.Element {
           greet={true}
           forCustomerDashboard={true}
           titleClassName="text-2xl font-bold text-gray-900 whitespace-normal break-words"
-          containerClassName="flex items-center justify-between gap-4 pt-6 mb-2"
+          containerClassName="flex items-center justify-between gap-4 pt-6 mb-0"
           rightSlot={
             <button
               type="button"
@@ -986,7 +984,7 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <section style={{ marginTop: 0, marginBottom: 8 }}>
+        <section style={{ marginTop: -2, marginBottom: 8 }}>
           <div
             style={{
               display: "flex",
@@ -997,21 +995,20 @@ export default function CustomerDashboard(): JSX.Element {
               textAlign: "center",
             }}
           >
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
-              {currentLocationLabel}
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+              {locationLabel}
             </span>
 
             <button
               type="button"
               onClick={requestCurrentLocation}
               style={{
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 500,
                 color: "#2563EB",
                 lineHeight: 1.2,
                 background: "transparent",
                 padding: 0,
-                cursor: "pointer",
               }}
             >
               Change
