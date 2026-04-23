@@ -1176,40 +1176,7 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <div
-          style={{
-            marginTop: -6,
-            marginBottom: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            textAlign: "center",
-          }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
-            {locationLabel}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => requestCurrentLocation(true)}
-            disabled={locationLabel === "Locating..."}
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              color: "#2563EB",
-              lineHeight: 1.2,
-              background: "transparent",
-              padding: 0,
-              opacity: locationLabel === "Locating..." ? 0.7 : 1,
-            }}
-          >
-            Change
-          </button>
-        </div>
-
-        <section style={{ marginTop: 0, marginBottom: 8 }}>
+        <section style={{ marginTop: 4, marginBottom: 8 }}>
           <h2 className="text-sm font-medium text-gray-800 mb-2">Search radius</h2>
 
           <div className="mb-3 flex gap-2">
