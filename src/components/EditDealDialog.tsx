@@ -939,7 +939,7 @@ if (deal.id && validImgs.length > 0) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Price (optional)</label>
+              <label className="block text-sm font-medium text-gray-700">Deal Value</label>
 
               <select
                 value={edited.priceMode}
