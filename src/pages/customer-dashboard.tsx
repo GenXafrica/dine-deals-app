@@ -1176,7 +1176,7 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <section style={{ marginTop: 4, marginBottom: 8 }}>
+        <section style={{ marginTop: 0, marginBottom: 8 }}>
           <h2 className="text-sm font-medium text-gray-800 mb-2">Search radius</h2>
 
           <div className="mb-3 flex gap-2">
