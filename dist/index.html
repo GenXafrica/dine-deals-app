@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dine Deals</title>
+
+    <!-- ✅ Open Graph (WhatsApp / Facebook preview) -->
+    <meta property="og:title" content="Dine Deals" />
+    <meta property="og:description" content="Discover live dining deals near you. Free for diners. Instant posts for restaurants." />
+    <meta property="og:image" content="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/logo-share.png" />
+    <meta property="og:url" content="https://app.dinedeals.co.za" />
+    <meta property="og:type" content="website" />
+
+    <!-- ✅ Twitter (also used by WhatsApp fallback) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dine Deals" />
+    <meta name="twitter:description" content="Discover live dining deals near you. Free for diners. Instant posts for restaurants." />
+    <meta name="twitter:image" content="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/logo-share.png" />
+
+    <!-- 🔐 Content Security Policy -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval'
+          https://js.paystack.co
+          https://checkout.paystack.com
+          https://maps.googleapis.com
+          https://unpkg.com;
+
+        frame-src https://checkout.paystack.com https://js.paystack.co;
+connect-src 'self'
+  https://app.dinedeals.co.za
+  https://cexezutizzchdpsspghx.supabase.co
+  wss://cexezutizzchdpsspghx.supabase.co
+  https://*.supabase.co
+  wss://*.supabase.co
+  https://api.paystack.co
+  https://checkout.paystack.com
+  https://maps.googleapis.com
+  https://maps.gstatic.com
+  https://unpkg.com;
+
+        style-src 'self' 'unsafe-inline' https://unpkg.com;
+        style-src-elem 'self' 'unsafe-inline'
+          https://fonts.googleapis.com
+          https://paystack.com
+          https://unpkg.com;
+
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: https: blob:;
+        media-src 'self' blob: data:;
+      "
+    />
+
+    <meta name="theme-color" content="#ffffff" />
+
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- ✅ Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- ✅ Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        height: 100%;
+      }
+      #root {
+        min-height: 100dvh;
+        background: #fff;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+    </style>
+
+    <link rel="icon" type="image/png" sizes="192x192" href="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-512.png">
+    <link rel="shortcut icon" href="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-192.png" type="image/png">
+
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+
+    <script>
+      const VERBOSE_LOGS =
+        /[?&]debug=1/.test(window.location.search) ||
+        window.location.hostname === 'localhost';
+
+      const debugLog = (...args) => { if (VERBOSE_LOGS) console.log(...args); };
+      const debugWarn = (...args) => { if (VERBOSE_LOGS) console.warn(...args); };
+      const debugError = (...args) => { console.error(...args); };
+
+      debugLog('INDEX_VERSION v9');
+    </script>
+
+    <script>
+      (function () {
+        const PROD_HOST = 'app.dinedeals.co.za';
+        const onProd = window.location.hostname === PROD_HOST;
+        const isAdminPath = window.location.pathname.startsWith('/admin');
+
+        try {
+          if ('serviceWorker' in navigator) {
+            const origRegister = navigator.serviceWorker.register?.bind(navigator.serviceWorker);
+            if (origRegister) {
+              navigator.serviceWorker.register = function (scriptURL, options) {
+                if (onProd && !isAdminPath) return origRegister(scriptURL, options);
+                debugWarn('[SW-Guard] Blocked register:', scriptURL);
+                return Promise.resolve();
+              };
+            }
+          }
+        } catch {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-DwJec5J3.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DU64P6Q_.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

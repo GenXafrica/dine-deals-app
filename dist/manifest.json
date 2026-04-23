@@ -1,0 +1,26 @@
+{
+  "name": "App Dine Deals",
+  "id": "app-dinedeals",
+  "short_name": "Dine Deals",
+  "description": "Find the best food deals near you - Eat well, Spend less!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "categories": ["food", "utilities"],
+  "icons": [
+    {
+      "src": "https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
