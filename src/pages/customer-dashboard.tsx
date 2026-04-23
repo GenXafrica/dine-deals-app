@@ -97,67 +97,6 @@ function getAiCategoryPick(choice: AiMoodOption): AiPickResult {
   return selected;
 }
 
-
-async function resolveReadableLocationName(latitude: number, longitude: number): Promise<string> {
-  const tryExtractName = (data: any): string | null => {
-    const address = data?.address ?? {};
-
-    const informativeItems = Array.isArray(data?.localityInfo?.informative)
-      ? data.localityInfo.informative
-      : [];
-
-    const informativeName =
-      informativeItems.find((item: any) =>
-        ["suburb", "city_district", "neighbourhood", "residential"].includes(item?.description)
-      )?.name ?? null;
-
-    const candidates = [
-      data?.locality,
-      informativeName,
-      address.suburb,
-      address.neighbourhood,
-      address.residential,
-      address.city_district,
-      address.town,
-      address.city,
-      address.village,
-      address.hamlet,
-      data?.city,
-      data?.principalSubdivision,
-      data?.name,
-      typeof data?.display_name === "string" ? data.display_name.split(",")[0]?.trim() : null,
-    ];
-
-    return (candidates.find((value) => typeof value === "string" && value.trim()) as string | undefined) ?? null;
-  };
-
-  const sources = [
-    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
-    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
-  ];
-
-  for (const url of sources) {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          "Accept-Language": "en",
-        },
-      });
-
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const name = tryExtractName(data);
-
-      if (name) return name;
-    } catch {}
-  }
-
-  return "Current location";
-}
-
-
 export default function CustomerDashboard(): JSX.Element {
   const navigate = useNavigate();
 
@@ -220,7 +159,7 @@ export default function CustomerDashboard(): JSX.Element {
   const [showMap, setShowMap] = useState(false);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [locationLabel, setLocationLabel] = useState("Current location");
+  const [locationLabel, setLocationLabel] = useState<string>("Current location");
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt?: string } | null>(null);
@@ -305,6 +244,62 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
+  const resolveLocationName = async (latitude: number, longitude: number) => {
+    try {
+      const bigDataResponse = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
+
+      if (bigDataResponse.ok) {
+        const bigData = await bigDataResponse.json();
+        const bigDataName =
+          bigData?.locality ||
+          bigData?.localityName ||
+          bigData?.city ||
+          bigData?.principalSubdivision ||
+          null;
+
+        if (bigDataName) {
+          setLocationLabel(String(bigDataName).trim());
+          return;
+        }
+      }
+    } catch {}
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Accept-Language": "en",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("reverse_geocode_failed");
+      }
+
+      const data = await response.json();
+      const address = data?.address ?? {};
+      const fallbackName =
+        address?.suburb ||
+        address?.neighbourhood ||
+        address?.residential ||
+        address?.city_district ||
+        address?.town ||
+        address?.city ||
+        data?.name ||
+        data?.display_name?.split(",")?.[0] ||
+        null;
+
+      setLocationLabel(fallbackName || "Current location");
+    } catch {
+      setLocationLabel("Current location");
+    }
+  };
+
   const requestCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
       setError("Geolocation not supported in this browser.");
@@ -314,17 +309,38 @@ export default function CustomerDashboard(): JSX.Element {
 
     setLocationLabel("Locating...");
 
+    let isFinished = false;
+
+    const failSafe = window.setTimeout(() => {
+      if (isFinished) return;
+      isFinished = true;
+      setLocationLabel("Current location");
+    }, 8000);
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude);
-        setLng(pos.coords.longitude);
+      async (pos) => {
+        if (isFinished) return;
+        isFinished = true;
+        window.clearTimeout(failSafe);
+
+        const nextLat = pos.coords.latitude;
+        const nextLng = pos.coords.longitude;
+
+        setLat(nextLat);
+        setLng(nextLng);
         setError(null);
+
+        await resolveLocationName(nextLat, nextLng);
       },
       () => {
+        if (isFinished) return;
+        isFinished = true;
+        window.clearTimeout(failSafe);
+
         setLocationLabel("Current location");
         setError("Unable to get location. Use test location or allow location.");
       },
-      { maximumAge: 60000, timeout: 7000 }
+      { maximumAge: 60000, timeout: 7000, enableHighAccuracy: true }
     );
   };
 
@@ -333,26 +349,6 @@ export default function CustomerDashboard(): JSX.Element {
       requestCurrentLocation();
     }, 0);
   }, []);
-
-  useEffect(() => {
-    if (lat === null || lng === null) return;
-
-    let cancelled = false;
-
-    const resolveLocationName = async () => {
-      const resolvedName = await resolveReadableLocationName(lat, lng);
-
-      if (!cancelled) {
-        setLocationLabel(resolvedName);
-      }
-    };
-
-    resolveLocationName();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lat, lng]);
 
   useEffect(() => {
     let mounted = true;
@@ -1011,38 +1007,38 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <section style={{ marginTop: -12, marginBottom: 8 }}>
-          <div
+        <div
+          style={{
+            marginTop: -2,
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            textAlign: "center",
+          }}
+        >
+          <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+            {locationLabel}
+          </span>
+
+          <button
+            type="button"
+            onClick={requestCurrentLocation}
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              marginBottom: 8,
-              textAlign: "center",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "#2563EB",
+              lineHeight: 1.2,
+              background: "transparent",
+              padding: 0,
             }}
           >
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
-              {locationLabel}
-            </span>
+            Change
+          </button>
+        </div>
 
-            <button
-              type="button"
-              onClick={requestCurrentLocation}
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: "#2563EB",
-                lineHeight: 1.2,
-                background: "transparent",
-                padding: 0,
-                cursor: "pointer",
-              }}
-            >
-              Change
-            </button>
-          </div>
-
+        <section style={{ marginTop: 0, marginBottom: 8 }}>
           <h2 className="text-sm font-medium text-gray-800 mb-2">Search radius</h2>
 
           <div className="mb-3 flex gap-2">
