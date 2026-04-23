@@ -375,55 +375,87 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   useEffect(() => {
     if (!deal || !open) return;
 
+    const applyDealToForm = (sourceDeal: any) => {
+      const imagesArr: string[] =
+        Array.isArray(sourceDeal.images) && sourceDeal.images.length > 0
+          ? (sourceDeal.images.filter(Boolean) as string[])
+          : sourceDeal.image
+            ? [sourceDeal.image]
+            : [];
 
-    const imagesArr: string[] =
-      Array.isArray(deal.images) && deal.images.length > 0
-        ? (deal.images.filter(Boolean) as string[])
-        : deal.image
-          ? [deal.image]
-          : [];
-
-    let repeatObj = null;
-    if (deal.repeat) {
-      try {
-        repeatObj = typeof deal.repeat === 'string' ? JSON.parse(deal.repeat) : deal.repeat;
-        repeatObj = ensureRepeatShape(repeatObj);
-      } catch {
+      let repeatObj = null;
+      if (sourceDeal.repeat) {
+        try {
+          repeatObj =
+            typeof sourceDeal.repeat === 'string' ? JSON.parse(sourceDeal.repeat) : sourceDeal.repeat;
+          repeatObj = ensureRepeatShape(repeatObj);
+        } catch {
+          repeatObj = ensureRepeatShape(null);
+        }
+      } else {
         repeatObj = ensureRepeatShape(null);
       }
-    } else {
-      repeatObj = ensureRepeatShape(null);
-    }
 
-    const incomingPriceType = typeof deal.price_type === 'string' ? deal.price_type : null;
-    const incomingPriceText = typeof deal.price_text === 'string' ? deal.price_text : '';
-    const derivedPriceMode: 'empty' | 'amount' | 'text' =
-      incomingPriceType === 'text'
-        ? 'text'
-        : incomingPriceType === 'amount'
-          ? 'amount'
-          : incomingPriceText
-            ? 'text'
-            : deal.price !== null && deal.price !== undefined
-              ? 'amount'
-              : 'empty';
+      const incomingPriceType =
+        typeof sourceDeal.price_type === 'string' ? sourceDeal.price_type : null;
+      const incomingPriceText =
+        typeof sourceDeal.price_text === 'string' ? sourceDeal.price_text : '';
+      const derivedPriceMode: 'empty' | 'amount' | 'text' =
+        incomingPriceType === 'text'
+          ? 'text'
+          : incomingPriceType === 'amount'
+            ? 'amount'
+            : incomingPriceText
+              ? 'text'
+              : sourceDeal.price !== null && sourceDeal.price !== undefined
+                ? 'amount'
+                : 'empty';
 
-    setEdited({
-      title: deal.title ?? '',
-      description: deal.description ?? '',
-      priceMode: derivedPriceMode,
-      displayPrice: derivedPriceMode === 'amount' ? formatPriceForDisplay(deal.price) : '',
-      price: derivedPriceMode === 'amount' ? (deal.price ?? null) : null,
-      priceText: derivedPriceMode === 'text' ? incomingPriceText : '',
-      starts_at: deal.starts_at ? toDateInput(deal.starts_at) : '',
-      ends_at: deal.ends_at ? toDateInput(deal.ends_at) : '',
-      images: imagesArr,
-      repeat: repeatObj,
-    });
+      setEdited({
+        title: sourceDeal.title ?? '',
+        description: sourceDeal.description ?? '',
+        priceMode: derivedPriceMode,
+        displayPrice: derivedPriceMode === 'amount' ? formatPriceForDisplay(sourceDeal.price) : '',
+        price: derivedPriceMode === 'amount' ? (sourceDeal.price ?? null) : null,
+        priceText: derivedPriceMode === 'text' ? incomingPriceText : '',
+        starts_at: sourceDeal.starts_at ? toDateInput(sourceDeal.starts_at) : '',
+        ends_at: sourceDeal.ends_at ? toDateInput(sourceDeal.ends_at) : '',
+        images: imagesArr,
+        repeat: repeatObj,
+      });
 
-    setCurrentDealId(deal.id ?? null);
-  }, [deal, open, currentDealId]);
+      setCurrentDealId(sourceDeal.id ?? deal.id ?? null);
+    };
 
+    const loadDealForEdit = async () => {
+      if (!deal.id || deal.id === 'new') {
+        applyDealToForm(deal);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('deals')
+          .select('id, title, description, starts_at, ends_at, images, image, price, price_type, price_text, repeat')
+          .eq('id', deal.id)
+          .maybeSingle();
+
+        if (error || !data) {
+          applyDealToForm(deal);
+          return;
+        }
+
+        applyDealToForm({
+          ...deal,
+          ...data,
+        });
+      } catch {
+        applyDealToForm(deal);
+      }
+    };
+
+    loadDealForEdit();
+  }, [deal, open]);
   const handleClose = () => {
     setRepeatModalOpen(false);
     handleDialogOpenChange(false);
