@@ -155,11 +155,6 @@ return copy;
   return (
     <div style={{ width: "100%", overflowX: "hidden", overflowY: "auto", paddingBottom: "8px" }}>
 
-{loading && rows.length === 0 && (
-  <div style={{ padding: 8, fontSize: 12, color: "#6B7280" }}>
-    Loading deals...
-  </div>
-)}
 
       {!loading && rows.length === 0 && (
         <div
