@@ -243,21 +243,26 @@ export default function CustomerDashboard(): JSX.Element {
     };
   }, []);
 
-  useEffect(() => {
+  const requestCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
       setError("Geolocation not supported in this browser.");
       return;
     }
 
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude);
+        setLng(pos.coords.longitude);
+        setError(null);
+      },
+      () => setError("Unable to get location. Use test location or allow location."),
+      { maximumAge: 60000, timeout: 7000 }
+    );
+  };
+
+  useEffect(() => {
     setTimeout(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLat(pos.coords.latitude);
-          setLng(pos.coords.longitude);
-        },
-        () => setError("Unable to get location. Use test location or allow location."),
-        { maximumAge: 60000, timeout: 7000 }
-      );
+      requestCurrentLocation();
     }, 0);
   }, []);
 
@@ -918,7 +923,37 @@ export default function CustomerDashboard(): JSX.Element {
           }
         />
 
-        <section style={{ marginTop: 4, marginBottom: 8 }}>
+        <section style={{ marginTop: 0, marginBottom: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              marginBottom: 10,
+              textAlign: "center",
+            }}
+          >
+            <span style={{ fontSize: 16, fontWeight: 600, color: "#111827", lineHeight: 1.2 }}>
+              Current location
+            </span>
+
+            <button
+              type="button"
+              onClick={requestCurrentLocation}
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#2563EB",
+                lineHeight: 1.2,
+                background: "transparent",
+                padding: 0,
+              }}
+            >
+              Change
+            </button>
+          </div>
+
           <h2 className="text-sm font-medium text-gray-800 mb-2">Search radius</h2>
 
           <div className="mb-3 flex gap-2">
