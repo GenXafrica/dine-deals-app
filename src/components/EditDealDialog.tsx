@@ -884,7 +884,7 @@ if (deal.id && validImgs.length > 0) {
 
       <div
         ref={innerRef}
-        className="relative bg-white w-[92%] max-w-md sm:max-w-lg md:w-[calc(100vw-48px)] md:max-w-[1080px] mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto md:mt-6 md:mb-6 md:h-auto md:max-h-[calc(100vh-48px)] md:overflow-y-auto px-3 pt-3 pb-2 md:px-4 md:pt-3 md:pb-5 rounded-2xl shadow-lg"
+        className="relative bg-[#F3F4F6] w-[92%] max-w-md sm:max-w-lg md:w-[calc(100vw-48px)] md:max-w-[1080px] mx-auto mt-[10vh] h-[85vh] max-h-[85vh] overflow-y-auto md:mt-6 md:mb-6 md:h-auto md:max-h-[calc(100vh-48px)] md:overflow-y-auto px-3 pt-3 pb-2 md:px-4 md:pt-3 md:pb-5 rounded-2xl shadow-lg"
         style={{ paddingBottom: `${bottomPaddingPx}px` }}
         onMouseDown={e => e.stopPropagation()}
       >
@@ -905,7 +905,7 @@ if (deal.id && validImgs.length > 0) {
                   setEdited(prev => ({ ...prev, title: nextTitle }));
                 }}
                 placeholder="50% off all coffees"
-                className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2 resize-none"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2 resize-none"
                 style={{
                   whiteSpace: 'normal',
                   overflowWrap: 'anywhere',
@@ -934,7 +934,7 @@ if (deal.id && validImgs.length > 0) {
                 }}
                 rows={4}
                 placeholder="Short description for the deal"
-                className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2"
               />
             </div>
 
@@ -953,7 +953,7 @@ if (deal.id && validImgs.length > 0) {
                     priceText: nextMode === 'text' ? prev.priceText : '',
                   }));
                 }}
-                className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2"
               >
                 <option value="empty">Empty</option>
                 <option value="amount">R Price</option>
@@ -975,7 +975,7 @@ if (deal.id && validImgs.length > 0) {
                   }}
                   placeholder="R199.95"
                   inputMode="decimal"
-                  className="bg-[#F3F4F6] block w-full mt-2 border rounded-md px-2 py-2"
+                  className="bg-white block w-full mt-2 border rounded-md px-2 py-2"
                 />
               )}
 
@@ -990,7 +990,7 @@ if (deal.id && validImgs.length > 0) {
                     }))
                   }
                   placeholder="50% Off or 2 for 1"
-                  className="bg-[#F3F4F6] block w-full mt-2 border rounded-md px-2 py-2"
+                  className="bg-white block w-full mt-2 border rounded-md px-2 py-2"
                 />
               )}
             </div>
@@ -1044,7 +1044,7 @@ if (deal.id && validImgs.length > 0) {
                 type="date"
                 value={edited.starts_at}
                 onChange={e => setEdited(prev => ({ ...prev, starts_at: e.target.value }))}
-                className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2"
               />
             </div>
 
@@ -1057,7 +1057,7 @@ if (deal.id && validImgs.length > 0) {
                 type="date"
                 value={edited.ends_at}
                 onChange={e => setEdited(prev => ({ ...prev, ends_at: e.target.value }))}
-                className="bg-[#F3F4F6] block w-full mt-1 border rounded-md px-2 py-2"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2"
               />
             </div>
 
