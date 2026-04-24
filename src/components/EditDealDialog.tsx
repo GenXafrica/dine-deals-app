@@ -1284,7 +1284,7 @@ if (deal.id && validImgs.length > 0) {
                         className="shrink-0 font-extrabold leading-none text-[#dc2626]"
                         style={{ fontSize: '1.1rem' }}
                       >
-                        {previewPrice || 'No price'}
+                        {previewPrice}
                       </div>
 
                       <div className="min-w-0 flex items-center gap-1 text-[10px] font-normal text-[#9ca3af]">
