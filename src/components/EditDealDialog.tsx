@@ -934,7 +934,7 @@ if (deal.id && validImgs.length > 0) {
                 }}
                 rows={4}
                 placeholder="Short description for the deal"
-                className="bg-white block w-full mt-1 border rounded-md px-2 py-2"
+                className="bg-white block w-full mt-1 border rounded-md px-2 py-2 resize-none"
               />
             </div>
 
