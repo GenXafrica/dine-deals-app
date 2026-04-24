@@ -121,7 +121,7 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
             {canAdd ? (
               <span className="flex items-center gap-2">
                 <Plus size={18} />
-                Add Deal
+                Deal
               </span>
             ) : (
               <span className="flex items-center gap-2">
