@@ -1279,23 +1279,30 @@ if (deal.id && validImgs.length > 0) {
                       Read more
                     </div>
 
-<div className="mt-auto mb-2 overflow-hidden">
-  {previewPrice && (
-    <div
-      className="mb-1 font-extrabold leading-none text-[#dc2626]"
-      style={{ fontSize: '1.1rem' }}
-    >
-      {previewPrice}
-    </div>
-  )}
+{previewPrice ? (
+                      <div className="mt-auto mb-2 flex items-end gap-2 overflow-hidden">
+                        <div
+                          className="shrink-0 font-extrabold leading-none text-[#dc2626]"
+                          style={{ fontSize: '1.1rem' }}
+                        >
+                          {previewPrice}
+                        </div>
 
-  <div className="min-w-0 flex items-center gap-1.5 text-[10px] font-normal text-[#9ca3af]">
-    <Calendar className="h-3.5 w-3.5 shrink-0 text-[#d97706]" />
-    <span className="truncate whitespace-nowrap">
-      {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
-    </span>
-  </div>
-</div>
+                        <div className="min-w-0 flex items-center gap-1 text-[10px] font-normal text-[#9ca3af]">
+                          <Calendar className="h-3.5 w-3.5 shrink-0 text-[#d97706]" />
+                          <span className="truncate whitespace-nowrap">
+                            {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-auto mb-2 flex items-center gap-1.5 overflow-hidden text-[10px] font-normal text-[#9ca3af]">
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-[#d97706]" />
+                        <span className="truncate whitespace-nowrap">
+                          {previewExpiry ? `Expires: ${previewExpiry}` : 'Expires: dd/mm/yyyy'}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-normal text-[#4f6fd6] break-words">
                       <Globe className="h-3.5 w-3.5 shrink-0" />
