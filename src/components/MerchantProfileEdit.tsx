@@ -1070,7 +1070,7 @@ if (form.address.trim() && !isGoogleConfirmed) {
                     <Input
                       value={form.agentCode}
                       onChange={e => setForm(f => ({ ...f, agentCode: e.target.value.toUpperCase() }))}
-                      placeholder="Agent code"
+                      placeholder="Only enter if provided by your province partner"
                       className="w-full bg-white"
                     />
                   </div>
