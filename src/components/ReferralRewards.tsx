@@ -12,14 +12,21 @@ interface AgentMerchant {
   email?: string;
   merchant_email?: string;
   province?: string;
+  merchant_province?: string;
+  assigned_province?: string;
+  agent_province?: string;
   plan_name?: string;
   subscription_plan?: string;
   status?: string;
   expected_commission?: number;
+  expected_commission_amount?: number;
+  commission?: number;
   commission_amount?: number;
   created_at?: string;
   assigned_at?: string;
+  assigned_date?: string;
   agent_assigned_at?: string;
+  agent_assignment_date?: string;
 }
 
 interface AgentDashboardData {
@@ -70,6 +77,18 @@ const normaliseDashboardData = (data: unknown): AgentDashboardData => {
       ? (rows as AgentMerchant[])
       : [];
 
+  const merchantCommissionTotal = merchants.reduce((total, merchant) => {
+    return (
+      total +
+      toNumber(
+        merchant.expected_commission ??
+          merchant.expected_commission_amount ??
+          merchant.commission ??
+          merchant.commission_amount
+      )
+    );
+  }, 0);
+
   return {
     total_merchants: toNumber(
       dashboard.total_merchants ??
@@ -81,7 +100,8 @@ const normaliseDashboardData = (data: unknown): AgentDashboardData => {
       dashboard.expected_commission ??
         dashboard.expected_commission_amount ??
         dashboard.total_expected_commission ??
-        dashboard.total_commission
+        dashboard.total_commission ??
+        merchantCommissionTotal
     ),
     merchants,
   };
@@ -207,8 +227,23 @@ export const ReferralRewards: React.FC = () => {
                 const merchantEmail = merchant.email || merchant.merchant_email || '';
                 const planName = merchant.plan_name || merchant.subscription_plan || 'No active plan';
                 const status = merchant.status || 'active';
-                const assignedAt = merchant.agent_assigned_at || merchant.assigned_at || merchant.created_at;
-                const commission = toNumber(merchant.expected_commission ?? merchant.commission_amount);
+                const assignedAt =
+                  merchant.agent_assigned_at ||
+                  merchant.agent_assignment_date ||
+                  merchant.assigned_at ||
+                  merchant.assigned_date ||
+                  merchant.created_at;
+                const province =
+                  merchant.province ||
+                  merchant.merchant_province ||
+                  merchant.assigned_province ||
+                  merchant.agent_province;
+                const commission = toNumber(
+                  merchant.expected_commission ??
+                    merchant.expected_commission_amount ??
+                    merchant.commission ??
+                    merchant.commission_amount
+                );
 
                 return (
                   <div key={merchantId} className="rounded-lg border p-3">
@@ -224,7 +259,7 @@ export const ReferralRewards: React.FC = () => {
                     <div className="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
                       <div>
                         <p className="text-xs text-gray-500">Province</p>
-                        <p>{merchant.province || 'Not available'}</p>
+                        <p>{province || 'Not available'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Plan</p>
