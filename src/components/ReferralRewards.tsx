@@ -1,107 +1,177 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Gift, TrendingUp, Share2, Award } from 'lucide-react';
+import { Building2, RefreshCw, Users, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-interface Reward {
-  id: string;
-  reward_type: string;
-  reward_value: number;
-  reward_status: string;
-  awarded_at: string;
-  expires_at: string;
-  deal_shares: {
-    deal_id: string;
-    deals: {
-      title: string;
-    };
+interface AgentMerchant {
+  id?: string;
+  merchant_id?: string;
+  name?: string;
+  merchant_name?: string;
+  email?: string;
+  merchant_email?: string;
+  province?: string;
+  plan_name?: string;
+  subscription_plan?: string;
+  status?: string;
+  expected_commission?: number;
+  commission_amount?: number;
+  created_at?: string;
+  assigned_at?: string;
+  agent_assigned_at?: string;
+}
+
+interface AgentDashboardData {
+  total_merchants: number;
+  expected_commission: number;
+  merchants: AgentMerchant[];
+}
+
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+  }).format(value || 0);
+};
+
+const formatDate = (value?: string): string => {
+  if (!value) return 'Not available';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+
+  return date.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const normaliseDashboardData = (data: unknown): AgentDashboardData => {
+  const rows = Array.isArray(data) ? data : [];
+  const root = rows.length === 1 ? rows[0] : data;
+  const dashboard = root && typeof root === 'object' ? (root as Record<string, unknown>) : {};
+
+  const merchantsSource = dashboard.merchants;
+  const merchants = Array.isArray(merchantsSource)
+    ? (merchantsSource as AgentMerchant[])
+    : rows.length > 1
+      ? (rows as AgentMerchant[])
+      : [];
+
+  return {
+    total_merchants: toNumber(
+      dashboard.total_merchants ??
+        dashboard.total_merchant_count ??
+        dashboard.merchant_count ??
+        merchants.length
+    ),
+    expected_commission: toNumber(
+      dashboard.expected_commission ??
+        dashboard.expected_commission_amount ??
+        dashboard.total_expected_commission ??
+        dashboard.total_commission
+    ),
+    merchants,
   };
-}
+};
 
-interface ReferralRewardsProps {
-  customerId: string;
-}
-
-export const ReferralRewards: React.FC<ReferralRewardsProps> = ({ customerId }) => {
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [stats, setStats] = useState({ totalPoints: 0, totalShares: 0, totalConversions: 0 });
+export const ReferralRewards: React.FC = () => {
+  const [dashboardData, setDashboardData] = useState<AgentDashboardData>({
+    total_merchants: 0,
+    expected_commission: 0,
+    merchants: [],
+  });
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    fetchRewards();
-    fetchStats();
-  }, [customerId]);
+  const fetchAgentDashboard = async () => {
+    setLoading(true);
+    setErrorMessage('');
 
-  const fetchRewards = async () => {
     try {
-      const { data, error } = await supabase
-        .from('referral_rewards')
-        .select(`
-          *,
-          deal_shares!inner(
-            deal_id,
-            deals!inner(title)
-          )
-        `)
-        .eq('customer_id', customerId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data: sessionData } = await supabase.auth.getSession();
 
-      if (error) throw error;
-      setRewards(data || []);
+      if (!sessionData?.session) {
+        setDashboardData({
+          total_merchants: 0,
+          expected_commission: 0,
+          merchants: [],
+        });
+        setErrorMessage('Please sign in to view your agent dashboard.');
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('get_agent_dashboard');
+
+      if (error) {
+        throw error;
+      }
+
+      setDashboardData(normaliseDashboardData(data));
     } catch (error) {
-      console.error('Error fetching rewards:', error);
+      console.error('Error loading agent dashboard:', error);
+      setErrorMessage('Agent dashboard could not be loaded.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const { data: rewardsData } = await supabase
-        .from('referral_rewards')
-        .select('reward_value')
-        .eq('customer_id', customerId)
-        .eq('reward_status', 'awarded');
+  useEffect(() => {
+    fetchAgentDashboard();
+  }, []);
 
-      const { data: sharesData } = await supabase
-        .from('deal_shares')
-        .select('id')
-        .eq('customer_id', customerId);
-
-      const { data: conversionsData } = await supabase
-        .from('referral_conversions')
-        .select('id')
-        .in('share_id', (sharesData || []).map(s => s.id));
-
-      const totalPoints = (rewardsData || []).reduce((sum, r) => sum + r.reward_value, 0);
-
-      setStats({
-        totalPoints,
-        totalShares: sharesData?.length || 0,
-        totalConversions: conversionsData?.length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
+  const merchantRows = useMemo(() => dashboardData.merchants || [], [dashboardData.merchants]);
 
   if (loading) {
-    return <div className="text-center py-4">Loading rewards...</div>;
+    return <div className="text-center py-4">Loading agent dashboard...</div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Agent Dashboard</h1>
+          <p className="text-sm text-gray-600">Track your assigned merchants and expected commission.</p>
+        </div>
+        <button
+          type="button"
+          onClick={fetchAgentDashboard}
+          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </button>
+      </div>
+
+      {errorMessage ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">{errorMessage}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Points</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalPoints}</p>
+                <p className="text-sm text-gray-600">Total Merchants</p>
+                <p className="text-2xl font-bold">{dashboardData.total_merchants}</p>
               </div>
-              <Award className="w-8 h-8 text-green-600" />
+              <Users className="w-8 h-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
@@ -110,22 +180,10 @@ export const ReferralRewards: React.FC<ReferralRewardsProps> = ({ customerId }) 
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Deals Shared</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalShares}</p>
+                <p className="text-sm text-gray-600">Expected Commission</p>
+                <p className="text-2xl font-bold">{formatCurrency(dashboardData.expected_commission)}</p>
               </div>
-              <Share2 className="w-8 h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Conversions</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.totalConversions}</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-purple-600" />
+              <Wallet className="w-8 h-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
@@ -134,58 +192,58 @@ export const ReferralRewards: React.FC<ReferralRewardsProps> = ({ customerId }) 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Gift className="w-5 h-5" />
-            Your Rewards
+            <Building2 className="w-5 h-5" />
+            Assigned Merchants
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {rewards.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">
-              No rewards yet. Start sharing deals to earn points!
-            </p>
+          {merchantRows.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No assigned merchants yet.</p>
           ) : (
             <div className="space-y-3">
-              {rewards.map((reward) => (
-                <div key={reward.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {reward.deal_shares?.deals?.title || 'Deal'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Awarded {new Date(reward.awarded_at).toLocaleDateString()}
-                    </p>
+              {merchantRows.map((merchant, index) => {
+                const merchantId = merchant.id || merchant.merchant_id || String(index);
+                const merchantName = merchant.name || merchant.merchant_name || 'Merchant';
+                const merchantEmail = merchant.email || merchant.merchant_email || '';
+                const planName = merchant.plan_name || merchant.subscription_plan || 'No active plan';
+                const status = merchant.status || 'active';
+                const assignedAt = merchant.agent_assigned_at || merchant.assigned_at || merchant.created_at;
+                const commission = toNumber(merchant.expected_commission ?? merchant.commission_amount);
+
+                return (
+                  <div key={merchantId} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{merchantName}</p>
+                        {merchantEmail ? <p className="text-xs text-gray-500 truncate">{merchantEmail}</p> : null}
+                        <p className="text-xs text-gray-500">Assigned {formatDate(assignedAt)}</p>
+                      </div>
+                      <Badge variant="secondary">{status}</Badge>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Province</p>
+                        <p>{merchant.province || 'Not available'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Plan</p>
+                        <p>{planName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Commission</p>
+                        <p>{formatCurrency(commission)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={reward.reward_status === 'awarded' ? 'default' : 'secondary'}>
-                      +{reward.reward_value} pts
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-r from-green-50 to-blue-50">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold mb-2">How to Earn Rewards</h3>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li className="flex items-start gap-2">
-              <span className="text-green-600 font-bold">•</span>
-              <span>Share deals and earn <strong>10 points</strong> when someone calls the merchant</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-600 font-bold">•</span>
-              <span>Earn <strong>20 points</strong> when someone navigates to the merchant</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-600 font-bold">•</span>
-              <span>Redeem points for exclusive discounts and perks</span>
-            </li>
-          </ul>
         </CardContent>
       </Card>
     </div>
   );
 };
+
+export default ReferralRewards;
