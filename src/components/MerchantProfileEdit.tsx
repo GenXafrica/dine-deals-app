@@ -22,6 +22,8 @@ type FormState = {
   phone: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   whatsapp: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   city: string;
+  province: string;
+  agentCode: string;
   address: string;
   googleAddress?: string | null;
   latitude?: number | null;
@@ -87,6 +89,8 @@ function MerchantProfileEdit(): JSX.Element {
     phone: '',
     whatsapp: '',
     city: '',
+    province: '',
+    agentCode: '',
     address: '',
     googleAddress: null,
     latitude: null,
@@ -1081,7 +1085,7 @@ if (form.address.trim() && !isGoogleConfirmed) {
                     <Input
                       value={form.agentCode}
                       onChange={e => setForm(f => ({ ...f, agentCode: e.target.value.toUpperCase() }))}
-                      placeholder="Only enter if provided by your province partner"
+                      placeholder="Supplied by your provincial agent"
                       className="w-full bg-white"
                     />
                   </div>
