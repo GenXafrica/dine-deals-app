@@ -22,8 +22,6 @@ type FormState = {
   phone: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   whatsapp: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   city: string;
-  province: string;
-  agentCode: string;
   address: string;
   googleAddress?: string | null;
   latitude?: number | null;
@@ -51,6 +49,18 @@ const cleanLogoValue = (v: any): string => {
   return t;
 };
 
+const PROVINCE_OPTIONS = [
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'Northern Cape',
+  'North West',
+  'Western Cape'
+];
+
 function MerchantProfileEdit(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -77,8 +87,6 @@ function MerchantProfileEdit(): JSX.Element {
     phone: '',
     whatsapp: '',
     city: '',
-    province: '',
-    agentCode: '',
     address: '',
     googleAddress: null,
     latitude: null,
@@ -358,7 +366,7 @@ const loadedLogoUrl = cleanLogoValue(rawLogo);
             whatsapp: loadedWhatsapp,
             city: merchant.city || '',
             province: merchant.province || '',
-            agentCode: merchant.agent_code || '',
+            agentCode: merchant.agent_code_used || '',
             address: merchant.address || '',
             googleAddress: merchant.google_address ?? null,
             latitude: merchant.latitude ?? null,
@@ -660,19 +668,6 @@ if (form.address.trim() && !isGoogleConfirmed) {
           })
           .eq('user_id', user.id);
 
-        if (!updateError && agentCode) {
-          setForm(f => ({ ...f, agentCode }));
-
-          try {
-            await supabase.rpc('apply_agent_code_to_merchant', {
-              p_merchant_id: merchant?.id ?? null,
-              p_agent_code: agentCode
-            });
-          } catch {
-            // Invalid or unavailable agent codes must fail silently.
-          }
-        }
-
         if (!updateError && shouldAcceptDealTerms) {
           setDealTermsAccepted(true);
           setMerchant((prev: any) => (prev ? { ...prev, deal_terms_accepted: true } : prev));
@@ -693,6 +688,26 @@ if (form.address.trim() && !isGoogleConfirmed) {
         }
       } catch {
         // Non-blocking
+      }
+
+      // Agent assignment must NEVER block a successful profile save
+      if (agentCode) {
+        try {
+          const { data: savedMerchant } = await supabase
+            .from('merchants')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (savedMerchant?.id) {
+            await supabase.rpc('apply_agent_code_to_merchant', {
+              p_merchant_id: savedMerchant.id,
+              p_agent_code: agentCode
+            });
+          }
+        } catch {
+          // Silent fail by design: invalid or mismatched agent codes must not show an error
+        }
       }
 
       toast({
@@ -1053,15 +1068,11 @@ if (form.address.trim() && !isGoogleConfirmed) {
                       className="w-full border rounded p-2 bg-white h-10"
                     >
                       <option value="">Select province</option>
-                      <option value="Eastern Cape">Eastern Cape</option>
-                      <option value="Free State">Free State</option>
-                      <option value="Gauteng">Gauteng</option>
-                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                      <option value="Limpopo">Limpopo</option>
-                      <option value="Mpumalanga">Mpumalanga</option>
-                      <option value="Northern Cape">Northern Cape</option>
-                      <option value="North West">North West</option>
-                      <option value="Western Cape">Western Cape</option>
+                      {PROVINCE_OPTIONS.map(province => (
+                        <option key={province} value={province}>
+                          {province}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1070,7 +1081,7 @@ if (form.address.trim() && !isGoogleConfirmed) {
                     <Input
                       value={form.agentCode}
                       onChange={e => setForm(f => ({ ...f, agentCode: e.target.value.toUpperCase() }))}
-                      placeholder="Provided by your province agent"
+                      placeholder="Only enter if provided by your province partner"
                       className="w-full bg-white"
                     />
                   </div>
