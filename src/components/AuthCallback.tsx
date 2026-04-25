@@ -45,6 +45,26 @@ export const AuthCallback = () => {
       return null;
     };
 
+    const waitForAgent = async (userId: string) => {
+      const maxAttempts = 8;
+      const delay = 400;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        const { data: agent } = await supabase
+          .from('agents')
+          .select('id, status')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (agent) return agent;
+
+        await sleep(delay);
+      }
+
+      return null;
+    };
+
     const waitForSession = async () => {
       let session = null;
       const maxAttempts = 8;
@@ -159,6 +179,13 @@ export const AuthCallback = () => {
 
       if (admin) {
         window.location.replace('/admin-dashboard');
+        return;
+      }
+
+      const agent = await waitForAgent(userId);
+
+      if (agent) {
+        window.location.replace('/agent-dashboard');
         return;
       }
 
