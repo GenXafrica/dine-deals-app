@@ -1047,12 +1047,22 @@ if (form.address.trim() && !isGoogleConfirmed) {
 
                   <div>
                     <Label className="mb-1">Province (optional)</Label>
-                    <Input
+                    <select
                       value={form.province}
                       onChange={e => setForm(f => ({ ...f, province: e.target.value }))}
-                      placeholder="Province"
-                      className="w-full bg-white"
-                    />
+                      className="w-full border rounded p-2 bg-white h-10"
+                    >
+                      <option value="">Select province</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="Northern Cape">Northern Cape</option>
+                      <option value="North West">North West</option>
+                      <option value="Western Cape">Western Cape</option>
+                    </select>
                   </div>
 
                   <div>
