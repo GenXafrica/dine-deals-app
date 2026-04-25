@@ -697,15 +697,21 @@ if (form.address.trim() && !isGoogleConfirmed) {
       // Agent assignment must NEVER block a successful profile save
       if (agentCode) {
         try {
-          const { data: savedMerchant } = await supabase
-            .from('merchants')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
+          let merchantId = merchant?.id || null;
 
-          if (savedMerchant?.id) {
+          if (!merchantId) {
+            const { data: savedMerchant } = await supabase
+              .from('merchants')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            merchantId = savedMerchant?.id || null;
+          }
+
+          if (merchantId) {
             await supabase.rpc('apply_agent_code_to_merchant', {
-              p_merchant_id: savedMerchant.id,
+              p_merchant_id: merchantId,
               p_agent_code: agentCode
             });
           }
