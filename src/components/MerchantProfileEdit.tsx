@@ -22,6 +22,8 @@ type FormState = {
   phone: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   whatsapp: string; // digits-only full international number (e.g. 27611234567, 447911123456)
   city: string;
+  province: string;
+  agentCode: string;
   address: string;
   googleAddress?: string | null;
   latitude?: number | null;
@@ -75,6 +77,8 @@ function MerchantProfileEdit(): JSX.Element {
     phone: '',
     whatsapp: '',
     city: '',
+    province: '',
+    agentCode: '',
     address: '',
     googleAddress: null,
     latitude: null,
@@ -353,6 +357,8 @@ const loadedLogoUrl = cleanLogoValue(rawLogo);
             phone: loadedPhone,
             whatsapp: loadedWhatsapp,
             city: merchant.city || '',
+            province: merchant.province || '',
+            agentCode: merchant.agent_code || '',
             address: merchant.address || '',
             googleAddress: merchant.google_address ?? null,
             latitude: merchant.latitude ?? null,
@@ -584,6 +590,8 @@ if (form.address.trim() && !isGoogleConfirmed) {
       const restaurantName = form.restaurantName.trim() || null;
       const address = form.address.trim() || null;
       const city = form.city.trim() || null;
+      const province = form.province.trim() || null;
+      const agentCode = form.agentCode.trim().toUpperCase() || null;
       const category = form.category.trim() || null;
 
       const isowner = form.roleType === 'owner';
@@ -647,9 +655,23 @@ if (form.address.trim() && !isGoogleConfirmed) {
             logo: logoToSave,
             whatsapp_number: normalizedWhatsapp,
             website: webAddress,
+            province,
             ...(shouldAcceptDealTerms ? { deal_terms_accepted: true } : {})
           })
           .eq('user_id', user.id);
+
+        if (!updateError && agentCode) {
+          setForm(f => ({ ...f, agentCode }));
+
+          try {
+            await supabase.rpc('apply_agent_code_to_merchant', {
+              p_merchant_id: merchant?.id ?? null,
+              p_agent_code: agentCode
+            });
+          } catch {
+            // Invalid or unavailable agent codes must fail silently.
+          }
+        }
 
         if (!updateError && shouldAcceptDealTerms) {
           setDealTermsAccepted(true);
@@ -1009,17 +1031,39 @@ if (form.address.trim() && !isGoogleConfirmed) {
                   />
                 </div>
 
-                <div>
-                  <Label className="mb-1">
-                    City <span className="text-red-600 ml-1">*</span>
-                  </Label>
-                  <Input
-                    value={form.city}
-                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                    placeholder="Nearest town / city"
-                    required
-                    className="w-full bg-white"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="mb-1">
+                      City <span className="text-red-600 ml-1">*</span>
+                    </Label>
+                    <Input
+                      value={form.city}
+                      onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                      placeholder="Nearest town / city"
+                      required
+                      className="w-full bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-1">Province (optional)</Label>
+                    <Input
+                      value={form.province}
+                      onChange={e => setForm(f => ({ ...f, province: e.target.value }))}
+                      placeholder="Province"
+                      className="w-full bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-1">Agent Code (optional)</Label>
+                    <Input
+                      value={form.agentCode}
+                      onChange={e => setForm(f => ({ ...f, agentCode: e.target.value.toUpperCase() }))}
+                      placeholder="Agent code"
+                      className="w-full bg-white"
+                    />
+                  </div>
                 </div>
 
                 <div>
