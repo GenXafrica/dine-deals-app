@@ -650,6 +650,8 @@ if (form.address.trim() && !isGoogleConfirmed) {
         restaurantName: restaurantName || f.restaurantName
       }));
 
+      let savedMerchantId = merchant?.id || null;
+
       // Secondary update must NEVER break a successful save
       try {
         const normalizedWhatsapp = (form.whatsapp || '').replace(/\D/g, '') || null;
@@ -657,7 +659,7 @@ if (form.address.trim() && !isGoogleConfirmed) {
         const shouldAcceptDealTerms = !merchant?.deal_terms_accepted && dealTermsAccepted;
 
         // ✅ FIX: also persist website into public.merchants.website
-        const { error: updateError } = await supabase
+        const { data: updatedMerchant, error: updateError } = await supabase
           .from('merchants')
           .update({
             first_name: firstName,
@@ -670,7 +672,14 @@ if (form.address.trim() && !isGoogleConfirmed) {
             province,
             ...(shouldAcceptDealTerms ? { deal_terms_accepted: true } : {})
           })
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .select('id, deal_terms_accepted')
+          .maybeSingle();
+
+        if (!updateError && updatedMerchant?.id) {
+          savedMerchantId = updatedMerchant.id;
+          setMerchant((prev: any) => (prev ? { ...prev, id: updatedMerchant.id } : updatedMerchant));
+        }
 
         if (!updateError && shouldAcceptDealTerms) {
           setDealTermsAccepted(true);
@@ -697,7 +706,7 @@ if (form.address.trim() && !isGoogleConfirmed) {
       // Agent assignment must NEVER block a successful profile save
       if (agentCode) {
         try {
-          let merchantId = merchant?.id || null;
+          let merchantId = savedMerchantId;
 
           if (!merchantId) {
             const { data: savedMerchant } = await supabase
