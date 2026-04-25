@@ -42,6 +42,7 @@ import { AboutUs } from "@/components/AboutUs";
 import AppLayout from "@/components/AppLayout";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import WireframeAnalysisPage from "./pages/InfoGuides";
+import { ReferralRewards } from "@/components/ReferralRewards";
 
 /* =========================
    SCROLL RESET ON ROUTE CHANGE
@@ -272,6 +273,8 @@ const AppRoutes = () => (
         </ProtectedMerchantRoute>
       }
     />
+
+    <Route path="/agent-dashboard" element={<ReferralRewards />} />
 
     <Route
       path="/admin-dashboard"
