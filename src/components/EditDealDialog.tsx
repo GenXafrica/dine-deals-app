@@ -1016,7 +1016,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Configure repeat"
                     title="Configure repeat"
                     style={{
-                      width: 104,
+                      width: 120,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
@@ -1345,7 +1345,7 @@ if (deal.id && validImgs.length > 0) {
               onMouseDown={closeRepeatModal}
             />
             <div
-              className="relative max-w-xl w-full mx-4 bg-white rounded-lg shadow-lg z-[1000001] pointer-events-auto"
+              className="relative max-w-xl w-full mx-4 bg-[#F3F4F6] rounded-lg shadow-lg z-[1000001] pointer-events-auto"
               onMouseDown={e => e.stopPropagation()}
               onClick={e => e.stopPropagation()}
               onTouchStart={e => e.stopPropagation()}
@@ -1399,7 +1399,7 @@ if (deal.id && validImgs.length > 0) {
                       aria-label="Edit time ranges"
                       title="Edit time ranges"
                       style={{
-                        width: 104,
+                        width: 120,
                         height: 44,
                         padding: 0,
                         borderRadius: 8,
@@ -1423,14 +1423,14 @@ if (deal.id && validImgs.length > 0) {
                           type="time"
                           value={tr.start}
                           onChange={e => updateTimeRange(idx, 'start', e.target.value)}
-                          className="px-2 py-1 border rounded-md text-sm bg-[#F3F4F6]"
+                          className="px-2 py-1 border rounded-md text-sm bg-white"
                         />
                         <span className="text-sm">to</span>
                         <input
                           type="time"
                           value={tr.end}
                           onChange={e => updateTimeRange(idx, 'end', e.target.value)}
-                          className="px-2 py-1 border rounded-md text-sm bg-[#F3F4F6]"
+                          className="px-2 py-1 border rounded-md text-sm bg-white"
                         />
                         <button
                           type="button"
@@ -1474,7 +1474,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Save repeat settings"
                     title="Save repeat settings"
                     style={{
-                      width: 104,
+                      width: 120,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
@@ -1496,7 +1496,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Cancel repeat changes"
                     title="Cancel repeat changes"
                     style={{
-                      width: 104,
+                      width: 120,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
