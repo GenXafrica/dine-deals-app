@@ -1016,7 +1016,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Configure repeat"
                     title="Configure repeat"
                     style={{
-                      width: 120,
+                      width: 104,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
@@ -1399,7 +1399,7 @@ if (deal.id && validImgs.length > 0) {
                       aria-label="Edit time ranges"
                       title="Edit time ranges"
                       style={{
-                        width: 120,
+                        width: 104,
                         height: 44,
                         padding: 0,
                         borderRadius: 8,
@@ -1474,7 +1474,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Save repeat settings"
                     title="Save repeat settings"
                     style={{
-                      width: 120,
+                      width: 104,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
@@ -1496,7 +1496,7 @@ if (deal.id && validImgs.length > 0) {
                     aria-label="Cancel repeat changes"
                     title="Cancel repeat changes"
                     style={{
-                      width: 120,
+                      width: 104,
                       height: 44,
                       padding: 0,
                       borderRadius: 8,
