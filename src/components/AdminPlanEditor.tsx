@@ -656,7 +656,11 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{assignedMerchantCount}</TableCell>
                         <TableCell>{formatMoney(commissionTotal)}</TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => editAgent(agent)}>
+                          <Button
+                            size="sm"
+                            onClick={() => editAgent(agent)}
+                            className="bg-[#2463EB] hover:bg-[#1D4ED8] text-white"
+                          >
                             Edit
                           </Button>
                         </TableCell>
