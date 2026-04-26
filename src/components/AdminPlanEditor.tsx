@@ -459,7 +459,7 @@ export const AdminAgentsTab: React.FC = () => {
 
           <div className="rounded-lg border border-gray-200 p-4 space-y-4">
             <div className="font-semibold text-gray-900">
-              {form.id ? 'Edit agent' : 'Add agent'}
+              {form.id ? `Edit agent: ${form.first_name || form.email_address || form.agent_code}` : 'Add agent'}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -557,7 +557,7 @@ export const AdminAgentsTab: React.FC = () => {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save agent
+                {form.id ? 'Update agent' : 'Save agent'}
               </Button>
               {form.id ? (
                 <Button variant="outline" onClick={resetForm} disabled={savingAgent}>
