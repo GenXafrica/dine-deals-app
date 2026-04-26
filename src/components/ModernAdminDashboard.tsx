@@ -5,7 +5,6 @@ import AdminHeader from './AdminHeader';
 import AdminStats from './AdminStats';
 import AdminUserTable from './AdminUserTable';
 import AdminSubscriptionsTab from './AdminSubscriptionsTab';
-import AdminAgentsTab from './AdminAgentsTab';
 import AdminUserManagement from './AdminUserManagement';
 import AdminEmailSettings from './AdminEmailSettings';
 import { HomeButton } from './HomeButton';
@@ -70,7 +69,7 @@ function downloadCsvFile(filename: string, content: string) {
 
 export default function ModernAdminDashboard() {
   const [activeTab, setActiveTab] =
-    useState<'users' | 'subscriptions' | 'agents' | 'admins' | 'emails'>('users');
+    useState<'users' | 'subscriptions' | 'admins' | 'emails'>('users');
 
   const [customers, setCustomers] = useState<AdminUser[]>([]);
   const [merchants, setMerchants] = useState<AdminUser[]>([]);
@@ -302,10 +301,9 @@ export default function ModernAdminDashboard() {
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-5 bg-white border shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-white border shadow-sm">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-            <TabsTrigger value="agents">Agents</TabsTrigger>
             <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="emails">Emails</TabsTrigger>
           </TabsList>
@@ -326,10 +324,6 @@ export default function ModernAdminDashboard() {
 
           <TabsContent value="subscriptions">
             <AdminSubscriptionsTab />
-          </TabsContent>
-
-          <TabsContent value="agents">
-            <AdminAgentsTab />
           </TabsContent>
 
           <TabsContent value="admins">
