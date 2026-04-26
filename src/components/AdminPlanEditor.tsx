@@ -49,6 +49,12 @@ interface PlanRow {
   name: string | null;
 }
 
+interface SubscriptionRow {
+  merchant_id: string | null;
+  status: string | null;
+  created_at?: string | null;
+}
+
 interface CommissionRow {
   id?: string;
   agent_id?: string | null;
@@ -134,6 +140,7 @@ export const AdminAgentsTab: React.FC = () => {
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
   const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [commissions, setCommissions] = useState<CommissionRow[]>([]);
   const [form, setForm] = useState<AgentFormState>(emptyForm);
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
@@ -158,6 +165,15 @@ export const AdminAgentsTab: React.FC = () => {
       return acc;
     }, {});
   }, [plans]);
+
+  const subscriptionStatusMap = useMemo(() => {
+    return subscriptions.reduce<Record<string, string>>((acc, subscription) => {
+      if (subscription.merchant_id && !acc[subscription.merchant_id]) {
+        acc[subscription.merchant_id] = subscription.status || '—';
+      }
+      return acc;
+    }, {});
+  }, [subscriptions]);
 
   const agentPerformance = useMemo(() => {
     return agents.map((agent) => {
@@ -187,11 +203,12 @@ export const AdminAgentsTab: React.FC = () => {
         setAgents([]);
         setMerchants([]);
         setPlans([]);
+        setSubscriptions([]);
         setCommissions([]);
         return;
       }
 
-      const [agentsResult, merchantsResult, plansResult, commissionsResult] = await Promise.all([
+      const [agentsResult, merchantsResult, plansResult, subscriptionsResult, commissionsResult] = await Promise.all([
         supabase
           .from('agents')
           .select('*')
@@ -204,6 +221,10 @@ export const AdminAgentsTab: React.FC = () => {
           .from('subscription_plans')
           .select('id, name'),
         supabase
+          .from('subscriptions')
+          .select('merchant_id, status, created_at')
+          .order('created_at', { ascending: false }),
+        supabase
           .from('agent_commissions')
           .select('*')
           .order('commission_month', { ascending: false }),
@@ -212,11 +233,13 @@ export const AdminAgentsTab: React.FC = () => {
       if (agentsResult.error) throw agentsResult.error;
       if (merchantsResult.error) throw merchantsResult.error;
       if (plansResult.error) throw plansResult.error;
+      if (subscriptionsResult.error) throw subscriptionsResult.error;
       if (commissionsResult.error) throw commissionsResult.error;
 
       setAgents((agentsResult.data || []) as AgentRow[]);
       setMerchants((merchantsResult.data || []) as MerchantRow[]);
       setPlans((plansResult.data || []) as PlanRow[]);
+      setSubscriptions((subscriptionsResult.data || []) as SubscriptionRow[]);
       setCommissions((commissionsResult.data || []) as CommissionRow[]);
     } catch (error: any) {
       console.error('Failed to load agent admin data:', error);
@@ -678,7 +701,7 @@ export const AdminAgentsTab: React.FC = () => {
                       <TableHead>Province</TableHead>
                       <TableHead>Agent</TableHead>
                       <TableHead>Plan</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Subscription</TableHead>
                       <TableHead>Assigned</TableHead>
                       <TableHead>Locked</TableHead>
                     </TableRow>
@@ -690,7 +713,7 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{merchant.province || '—'}</TableCell>
                         <TableCell>{getAgentName(agentMap[merchant.agent_id || ''])}</TableCell>
                         <TableCell>{merchant.subscription_plan_id ? planMap[merchant.subscription_plan_id] || '—' : '—'}</TableCell>
-                        <TableCell>{merchant.status || '—'}</TableCell>
+                        <TableCell>{subscriptionStatusMap[merchant.id] || '—'}</TableCell>
                         <TableCell>{formatDate(merchant.agent_assigned_at)}</TableCell>
                         <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
                       </TableRow>
