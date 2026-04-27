@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Utensils, Store } from "lucide-react";
+import { CheckCircle, Utensils, Store } from "lucide-react";
 
 interface RegistrationConfirmationModalProps {
   open: boolean;
@@ -34,7 +34,6 @@ export const RegistrationConfirmationModal: React.FC<
 
   const isDiner = accountType === "customer";
   const displayAccountType = isDiner ? "Diner" : "Restaurant";
-  const accentColor = isDiner ? "bg-[#FBB345]" : "bg-red-600";
   const Icon = isDiner ? Utensils : Store;
 
   const handleCancel = () => {
@@ -68,15 +67,17 @@ export const RegistrationConfirmationModal: React.FC<
             setConfirmed(true);
           }}
           className={`
-            mt-3 rounded-xl border overflow-hidden cursor-pointer
-            transition-all bg-[#F3F4F6]
+            mt-3 rounded-xl border border-gray-300 overflow-hidden cursor-pointer
+            transition-all bg-[#F3F4F6] shadow-sm relative
             ${confirmed ? "ring-2 ring-green-600" : ""}
           `}
         >
-          <div className={`h-1.5 ${accentColor}`} />
+          {confirmed && (
+            <CheckCircle className="absolute right-3 top-3 w-4 h-4 text-green-600" />
+          )}
 
           <div className="p-3 space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pr-6">
               <Icon className="w-4 h-4 text-gray-600" />
               <div>
                 <p className="text-xs text-muted-foreground">
