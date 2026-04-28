@@ -17,6 +17,34 @@ async function waitForSession(maxMs = 8000): Promise<null | any> {
   return null;
 }
 
+function normalizeEmail(email: any): string {
+  return String(email || '').trim().toLowerCase();
+}
+
+function mergeWelcomeEmailSentAt(users: any[], welcomeRows: any[]): any[] {
+  const byUserId = new Map<string, any>();
+  const byEmail = new Map<string, any>();
+
+  welcomeRows.forEach((row) => {
+    if (row?.user_id) byUserId.set(String(row.user_id), row);
+    const email = normalizeEmail(row?.email);
+    if (email) byEmail.set(email, row);
+  });
+
+  return users.map((user) => {
+    const matchByUserId = user?.user_id ? byUserId.get(String(user.user_id)) : null;
+    const matchByEmail = byEmail.get(normalizeEmail(user?.email));
+    const match = matchByUserId || matchByEmail;
+
+    if (!match?.welcome_email_sent_at) return user;
+
+    return {
+      ...user,
+      welcome_email_sent_at: match.welcome_email_sent_at,
+    };
+  });
+}
+
 export default function AdminUsersTab() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [merchants, setMerchants] = useState<any[]>([]);
@@ -57,8 +85,41 @@ export default function AdminUsersTab() {
         throw new Error(error?.message || data?.error || 'Failed to fetch users');
       }
 
-      const customersData = data.customers || [];
-      const merchantsData = data.merchants || [];
+      let customersData = data.customers || [];
+      let merchantsData = data.merchants || [];
+
+      const [customerWelcomeResult, merchantWelcomeResult] = await Promise.all([
+        supabase
+          .from('customers')
+          .select('id,user_id,email,welcome_email_sent_at'),
+        supabase
+          .from('merchants')
+          .select('id,user_id,email,welcome_email_sent_at'),
+      ]);
+
+      if (customerWelcomeResult.error) {
+        console.warn(
+          '[AdminUsersTab] customer welcome status fetch failed',
+          customerWelcomeResult.error
+        );
+      } else {
+        customersData = mergeWelcomeEmailSentAt(
+          customersData,
+          customerWelcomeResult.data || []
+        );
+      }
+
+      if (merchantWelcomeResult.error) {
+        console.warn(
+          '[AdminUsersTab] merchant welcome status fetch failed',
+          merchantWelcomeResult.error
+        );
+      } else {
+        merchantsData = mergeWelcomeEmailSentAt(
+          merchantsData,
+          merchantWelcomeResult.data || []
+        );
+      }
 
       setCustomers(customersData);
       setMerchants(merchantsData);
