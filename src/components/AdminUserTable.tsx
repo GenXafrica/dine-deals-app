@@ -142,49 +142,102 @@ export default function AdminUserTable({
     useState<'all' | 'verified' | 'unverified'>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UnifiedUser | null>(null);
+  const [welcomeStatusByEmail, setWelcomeStatusByEmail] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchWelcomeStatuses = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-manage-users', {
+          body: { action: 'list' },
+        });
+
+        if (error || !data?.success || !isMounted) return;
+
+        const statusMap: Record<string, boolean> = {};
+
+        const addRecord = (record: any) => {
+          const email = formatDisplayEmail(record?.email || record?.raw?.email || '');
+          if (!email) return;
+          if (hasWelcomeEmailBeenSent(record)) {
+            statusMap[email] = true;
+          }
+        };
+
+        (data.customers || []).forEach(addRecord);
+        (data.merchants || []).forEach(addRecord);
+
+        setWelcomeStatusByEmail(statusMap);
+      } catch {
+        // Keep existing table data if the fallback lookup is unavailable.
+      }
+    };
+
+    fetchWelcomeStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const combined = useMemo(() => {
     const mappedCustomers =
-      customers?.map((c) => ({
-        id: c.user_id || c.raw?.user_id || c.id,
-        db_id: c.id || c.raw?.id || c.user_id,
-        type: 'customer' as const,
-        name: getCustomerDisplayName(c),
-        email: c.email || c.raw?.email || '',
-        created_at: c.created_at || c.raw?.created_at,
-        verified: !!(c.email_verified || c.verified || c.raw?.email_confirmed_at),
-        welcomeEmailSent: hasWelcomeEmailBeenSent(c),
-        raw: c,
-      })) || [];
+      customers?.map((c) => {
+        const email = c.email || c.raw?.email || '';
+        const emailKey = formatDisplayEmail(email);
+
+        return {
+          id: c.user_id || c.raw?.user_id || c.id,
+          db_id: c.id || c.raw?.id || c.user_id,
+          type: 'customer' as const,
+          name: getCustomerDisplayName(c),
+          email,
+          created_at: c.created_at || c.raw?.created_at,
+          verified: !!(c.email_verified || c.verified || c.raw?.email_confirmed_at),
+          welcomeEmailSent: hasWelcomeEmailBeenSent(c) || !!welcomeStatusByEmail[emailKey],
+          raw: c,
+        };
+      }) || [];
 
     const mappedMerchants =
-      merchants?.map((m) => ({
-        id: m.user_id || m.raw?.user_id || m.id,
-        db_id: m.id || m.raw?.id || m.user_id,
-        type: 'merchant' as const,
-        name: getMerchantDisplayName(m),
-        email: m.email || m.raw?.email || '',
-        created_at: m.created_at || m.raw?.created_at,
-        verified: !!(m.email_verified || m.verified || m.raw?.email_confirmed_at),
-        welcomeEmailSent: hasWelcomeEmailBeenSent(m),
-        raw: m,
-      })) || [];
+      merchants?.map((m) => {
+        const email = m.email || m.raw?.email || '';
+        const emailKey = formatDisplayEmail(email);
+
+        return {
+          id: m.user_id || m.raw?.user_id || m.id,
+          db_id: m.id || m.raw?.id || m.user_id,
+          type: 'merchant' as const,
+          name: getMerchantDisplayName(m),
+          email,
+          created_at: m.created_at || m.raw?.created_at,
+          verified: !!(m.email_verified || m.verified || m.raw?.email_confirmed_at),
+          welcomeEmailSent: hasWelcomeEmailBeenSent(m) || !!welcomeStatusByEmail[emailKey],
+          raw: m,
+        };
+      }) || [];
 
     const mappedUnassigned =
-      unassigned?.map((u) => ({
-        id: u.user_id || u.id || u.raw?.user_id || u.raw?.id,
-        db_id: u.id || u.raw?.id || u.user_id,
-        type: 'unassigned' as const,
-        name: '',
-        email: u.email || u.raw?.email || '',
-        created_at: u.created_at || u.raw?.created_at,
-        verified: !!(u.email_verified || u.verified || u.raw?.email_confirmed_at),
-        welcomeEmailSent: hasWelcomeEmailBeenSent(u),
-        raw: u,
-      })) || [];
+      unassigned?.map((u) => {
+        const email = u.email || u.raw?.email || '';
+        const emailKey = formatDisplayEmail(email);
+
+        return {
+          id: u.user_id || u.id || u.raw?.user_id || u.raw?.id,
+          db_id: u.id || u.raw?.id || u.user_id,
+          type: 'unassigned' as const,
+          name: '',
+          email,
+          created_at: u.created_at || u.raw?.created_at,
+          verified: !!(u.email_verified || u.verified || u.raw?.email_confirmed_at),
+          welcomeEmailSent: hasWelcomeEmailBeenSent(u) || !!welcomeStatusByEmail[emailKey],
+          raw: u,
+        };
+      }) || [];
 
     return [...mappedCustomers, ...mappedMerchants, ...mappedUnassigned];
-  }, [customers, merchants, unassigned]);
+  }, [customers, merchants, unassigned, welcomeStatusByEmail]);
 
   useEffect(() => {
     setAllUsers(combined);
