@@ -190,6 +190,7 @@ export const AdminAgentsTab: React.FC = () => {
   const [commissionMonth, setCommissionMonth] = useState(getCurrentMonthValue());
   const [loading, setLoading] = useState(true);
   const [savingAgent, setSavingAgent] = useState(false);
+  const [generatingAgentCode, setGeneratingAgentCode] = useState(false);
   const [assigningMerchant, setAssigningMerchant] = useState(false);
   const [calculatingCommission, setCalculatingCommission] = useState(false);
   const { toast } = useToast();
@@ -339,6 +340,41 @@ export const AdminAgentsTab: React.FC = () => {
 
   const resetForm = () => {
     setForm(emptyForm);
+  };
+
+  const handleProvinceChange = async (province: string) => {
+    setForm((currentForm) => ({
+      ...currentForm,
+      province,
+      agent_code: currentForm.id ? currentForm.agent_code : '',
+    }));
+
+    if (!province || form.id) return;
+
+    setGeneratingAgentCode(true);
+
+    try {
+      const { data, error } = await supabase.rpc('admin_get_next_agent_code', {
+        p_province: province,
+      });
+
+      if (error) throw error;
+
+      setForm((currentForm) => ({
+        ...currentForm,
+        province,
+        agent_code: String(data || ''),
+      }));
+    } catch (error: any) {
+      console.error('Failed to generate agent code:', error);
+      toast({
+        title: 'Agent code generation failed',
+        description: error?.message || 'Could not generate the next agent code.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingAgentCode(false);
+    }
   };
 
   const editAgent = (agent: AgentRow) => {
@@ -590,7 +626,7 @@ export const AdminAgentsTab: React.FC = () => {
                 <Label>Province</Label>
                 <select
                   value={form.province}
-                  onChange={(e) => setForm({ ...form, province: e.target.value })}
+                  onChange={(e) => handleProvinceChange(e.target.value)}
                   className="w-full border rounded-md px-3 py-2 text-sm"
                 >
                   <option value="">Select province</option>
@@ -604,9 +640,9 @@ export const AdminAgentsTab: React.FC = () => {
               <div>
                 <Label>Agent code</Label>
                 <Input
-                  value={form.agent_code}
-                  onChange={(e) => setForm({ ...form, agent_code: e.target.value.toUpperCase() })}
-                  placeholder="KZN-TEST001"
+                  value={generatingAgentCode ? 'Generating…' : form.agent_code}
+                  readOnly
+                  placeholder="Auto-generated from province"
                 />
               </div>
               <div>
@@ -631,7 +667,7 @@ export const AdminAgentsTab: React.FC = () => {
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={saveAgent} disabled={savingAgent}>
+              <Button onClick={saveAgent} disabled={savingAgent || generatingAgentCode}>
                 {savingAgent ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
