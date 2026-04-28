@@ -42,6 +42,7 @@ type UnifiedUser = {
   email: string;
   created_at?: string;
   verified?: boolean;
+  welcomeEmailSent?: boolean;
   raw?: any;
 };
 
@@ -102,6 +103,12 @@ export default function AdminUserTable({
         email: c.email || c.raw?.email || '',
         created_at: c.created_at || c.raw?.created_at,
         verified: !!(c.email_verified || c.verified || c.raw?.email_confirmed_at),
+        welcomeEmailSent: !!(
+          c.welcome_email_sent_at ||
+          c.welcomeEmailSent ||
+          c.raw?.welcome_email_sent_at ||
+          c.raw?.welcomeEmailSent
+        ),
         raw: c,
       })) || [];
 
@@ -114,6 +121,12 @@ export default function AdminUserTable({
         email: m.email || m.raw?.email || '',
         created_at: m.created_at || m.raw?.created_at,
         verified: !!(m.email_verified || m.verified || m.raw?.email_confirmed_at),
+        welcomeEmailSent: !!(
+          m.welcome_email_sent_at ||
+          m.welcomeEmailSent ||
+          m.raw?.welcome_email_sent_at ||
+          m.raw?.welcomeEmailSent
+        ),
         raw: m,
       })) || [];
 
@@ -126,6 +139,12 @@ export default function AdminUserTable({
         email: u.email || u.raw?.email || '',
         created_at: u.created_at || u.raw?.created_at,
         verified: !!(u.email_verified || u.verified || u.raw?.email_confirmed_at),
+        welcomeEmailSent: !!(
+          u.welcome_email_sent_at ||
+          u.welcomeEmailSent ||
+          u.raw?.welcome_email_sent_at ||
+          u.raw?.welcomeEmailSent
+        ),
         raw: u,
       })) || [];
 
@@ -267,6 +286,7 @@ export default function AdminUserTable({
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Verified</TableHead>
+                <TableHead>Welcome</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -279,6 +299,7 @@ export default function AdminUserTable({
                   <TableCell>{u.name || '—'}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.verified ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>{u.welcomeEmailSent ? 'Yes' : 'No'}</TableCell>
                   <TableCell>
                     {u.created_at
                       ? new Date(u.created_at).toLocaleDateString('en-GB')
