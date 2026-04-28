@@ -52,6 +52,56 @@ interface AdminUserTableProps {
   unassigned?: any[];
 }
 
+
+function formatDisplayName(value: string): string {
+  const trimmed = String(value || '').trim().replace(/\s+/g, ' ');
+
+  if (!trimmed) return '';
+
+  const capitalisePart = (part: string) => {
+    if (!part) return part;
+    const lower = part.toLocaleLowerCase();
+    return lower.charAt(0).toLocaleUpperCase() + lower.slice(1);
+  };
+
+  return trimmed
+    .split(' ')
+    .map((word) =>
+      word
+        .split('-')
+        .map((hyphenPart) =>
+          hyphenPart
+            .split("'")
+            .map((apostrophePart) => capitalisePart(apostrophePart))
+            .join("'")
+        )
+        .join('-')
+    )
+    .join(' ');
+}
+
+function formatDisplayEmail(value: string): string {
+  return String(value || '').trim().toLocaleLowerCase();
+}
+
+function hasWelcomeEmailBeenSent(record: any): boolean {
+  const value =
+    record?.welcome_email_sent_at ??
+    record?.welcomeEmailSentAt ??
+    record?.welcome_email_sent ??
+    record?.welcomeEmailSent ??
+    record?.raw?.welcome_email_sent_at ??
+    record?.raw?.welcomeEmailSentAt ??
+    record?.raw?.welcome_email_sent ??
+    record?.raw?.welcomeEmailSent;
+
+  if (typeof value === 'boolean') return value;
+  if (value === null || value === undefined) return false;
+
+  const normalised = String(value).trim().toLocaleLowerCase();
+  return normalised !== '' && normalised !== 'false' && normalised !== 'no' && normalised !== '0';
+}
+
 function getCustomerDisplayName(customer: any): string {
   const fullName =
     customer?.full_name ||
@@ -103,12 +153,7 @@ export default function AdminUserTable({
         email: c.email || c.raw?.email || '',
         created_at: c.created_at || c.raw?.created_at,
         verified: !!(c.email_verified || c.verified || c.raw?.email_confirmed_at),
-        welcomeEmailSent: !!(
-          c.welcome_email_sent_at ||
-          c.welcomeEmailSent ||
-          c.raw?.welcome_email_sent_at ||
-          c.raw?.welcomeEmailSent
-        ),
+        welcomeEmailSent: hasWelcomeEmailBeenSent(c),
         raw: c,
       })) || [];
 
@@ -121,12 +166,7 @@ export default function AdminUserTable({
         email: m.email || m.raw?.email || '',
         created_at: m.created_at || m.raw?.created_at,
         verified: !!(m.email_verified || m.verified || m.raw?.email_confirmed_at),
-        welcomeEmailSent: !!(
-          m.welcome_email_sent_at ||
-          m.welcomeEmailSent ||
-          m.raw?.welcome_email_sent_at ||
-          m.raw?.welcomeEmailSent
-        ),
+        welcomeEmailSent: hasWelcomeEmailBeenSent(m),
         raw: m,
       })) || [];
 
@@ -139,12 +179,7 @@ export default function AdminUserTable({
         email: u.email || u.raw?.email || '',
         created_at: u.created_at || u.raw?.created_at,
         verified: !!(u.email_verified || u.verified || u.raw?.email_confirmed_at),
-        welcomeEmailSent: !!(
-          u.welcome_email_sent_at ||
-          u.welcomeEmailSent ||
-          u.raw?.welcome_email_sent_at ||
-          u.raw?.welcomeEmailSent
-        ),
+        welcomeEmailSent: hasWelcomeEmailBeenSent(u),
         raw: u,
       })) || [];
 
@@ -296,8 +331,8 @@ export default function AdminUserTable({
               {filtered.map((u) => (
                 <TableRow key={`${u.type}-${u.id}`}>
                   <TableCell>{u.type}</TableCell>
-                  <TableCell>{u.name || '—'}</TableCell>
-                  <TableCell>{u.email}</TableCell>
+                  <TableCell>{formatDisplayName(u.name) || '—'}</TableCell>
+                  <TableCell>{formatDisplayEmail(u.email)}</TableCell>
                   <TableCell>{u.verified ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{u.welcomeEmailSent ? 'Yes' : 'No'}</TableCell>
                   <TableCell>
