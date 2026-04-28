@@ -179,7 +179,9 @@ export const AdminAgentsTab: React.FC = () => {
     return agents.map((agent) => {
       const assignedMerchants = merchants.filter((merchant) => merchant.agent_id === agent.id);
       const commissionTotal = commissions
-        .filter((commission) => commission.agent_id === agent.id)
+        .filter((commission) => {
+          return commission.agent_id === agent.id && (commission.status || '').toLowerCase() !== 'paid';
+        })
         .reduce((total, commission) => total + Number(getCommissionValue(commission) || 0), 0);
 
       return {
@@ -189,6 +191,28 @@ export const AdminAgentsTab: React.FC = () => {
       };
     });
   }, [agents, merchants, commissions]);
+
+  const totalAssignedMerchants = useMemo(() => {
+    return merchants.filter((merchant) => merchant.agent_id).length;
+  }, [merchants]);
+
+  const pendingCommissionTotal = useMemo(() => {
+    return commissions
+      .filter((commission) => (commission.status || '').toLowerCase() !== 'paid')
+      .reduce((total, commission) => total + Number(getCommissionValue(commission) || 0), 0);
+  }, [commissions]);
+
+  const paidThisMonthTotal = useMemo(() => {
+    const now = new Date();
+    return commissions
+      .filter((commission) => {
+        if (!commission.paid_at) return false;
+        const paidDate = new Date(commission.paid_at);
+        if (Number.isNaN(paidDate.getTime())) return false;
+        return paidDate.getFullYear() === now.getFullYear() && paidDate.getMonth() === now.getMonth();
+      })
+      .reduce((total, commission) => total + Number(getCommissionValue(commission) || 0), 0);
+  }, [commissions]);
 
   const unlockedMerchants = useMemo(() => {
     return merchants.filter((merchant) => !merchant.agent_assignment_locked && !merchant.agent_id);
@@ -459,24 +483,20 @@ export const AdminAgentsTab: React.FC = () => {
         <CardContent className="space-y-6 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Agents</div>
+              <div className="text-sm text-gray-600">Total Agents</div>
               <div className="text-2xl font-semibold text-gray-900">{agents.length}</div>
             </div>
             <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Active agents</div>
-              <div className="text-2xl font-semibold text-gray-900">
-                {agents.filter((agent) => agent.status === 'active').length}
-              </div>
+              <div className="text-sm text-gray-600">Assigned Merchants</div>
+              <div className="text-2xl font-semibold text-gray-900">{totalAssignedMerchants}</div>
             </div>
             <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Assigned merchants</div>
-              <div className="text-2xl font-semibold text-gray-900">
-                {merchants.filter((merchant) => merchant.agent_id).length}
-              </div>
+              <div className="text-sm text-gray-600">Pending Commission</div>
+              <div className="text-2xl font-semibold text-gray-900">{formatMoney(pendingCommissionTotal)}</div>
             </div>
             <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Unlocked merchants</div>
-              <div className="text-2xl font-semibold text-gray-900">{unlockedMerchants.length}</div>
+              <div className="text-sm text-gray-600">Paid This Month</div>
+              <div className="text-2xl font-semibold text-gray-900">{formatMoney(paidThisMonthTotal)}</div>
             </div>
           </div>
 
@@ -656,17 +676,22 @@ export const AdminAgentsTab: React.FC = () => {
             <div className="text-sm text-gray-600">Loading…</div>
           ) : (
             <div className="space-y-6">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Agent</TableHead>
-                      <TableHead>Province</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Merchants</TableHead>
-                      <TableHead>Commission</TableHead>
-                      <TableHead>Actions</TableHead>
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Agents Overview</div>
+                  <div className="text-sm text-gray-600">Agent-level status, merchant count and pending commission total.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agent Name</TableHead>
+                        <TableHead>Province</TableHead>
+                        <TableHead>Agent Code</TableHead>
+                        <TableHead>Agent Status</TableHead>
+                        <TableHead>Assigned Merchants</TableHead>
+                        <TableHead>Pending Commission</TableHead>
+                        <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -689,21 +714,27 @@ export const AdminAgentsTab: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Merchant</TableHead>
-                      <TableHead>Province</TableHead>
-                      <TableHead>Agent</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Subscription</TableHead>
-                      <TableHead>Assigned</TableHead>
-                      <TableHead>Locked</TableHead>
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Merchant Assignments</div>
+                  <div className="text-sm text-gray-600">Merchant plan, subscription status and agent assignment lock details.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Merchant</TableHead>
+                        <TableHead>Province</TableHead>
+                        <TableHead>Assigned Agent</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Subscription Status</TableHead>
+                        <TableHead>Assigned Date</TableHead>
+                        <TableHead>Assignment Locked</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -718,19 +749,25 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Agent</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Paid</TableHead>
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Commission Payouts</div>
+                  <div className="text-sm text-gray-600">Commission amount, payout status and paid date.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead>Agent</TableHead>
+                        <TableHead>Commission Amount</TableHead>
+                        <TableHead>Payout Status</TableHead>
+                        <TableHead>Paid Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -743,8 +780,9 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{formatDate(commission.paid_at)}</TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
           )}
