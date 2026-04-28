@@ -385,24 +385,19 @@ export const AdminAgentsTab: React.FC = () => {
       return;
     }
 
-    const agent = agentMap[selectedAgentId];
-    if (!agent) return;
-
     setAssigningMerchant(true);
 
     try {
-      const { error } = await supabase
-        .from('merchants')
-        .update({
-          agent_id: selectedAgentId,
-          agent_code_used: agent.agent_code,
-          agent_assigned_at: new Date().toISOString(),
-          agent_assignment_locked: true,
-        })
-        .eq('id', selectedMerchantId)
-        .eq('agent_assignment_locked', false);
+      const { data, error } = await supabase.rpc('admin_assign_merchant_to_agent', {
+        p_merchant_id: selectedMerchantId,
+        p_agent_id: selectedAgentId,
+      });
 
       if (error) throw error;
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'The merchant was not assigned.');
+      }
 
       toast({
         title: 'Merchant assigned',
