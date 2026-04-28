@@ -42,6 +42,9 @@ interface MerchantRow {
   agent_assignment_locked: boolean | null;
   status: string | null;
   subscription_plan_id: string | null;
+  promo_enabled: boolean | null;
+  promo_started_at: string | null;
+  promo_expires_at: string | null;
 }
 
 interface PlanRow {
@@ -52,6 +55,7 @@ interface PlanRow {
 interface SubscriptionRow {
   merchant_id: string | null;
   status: string | null;
+  paid_until?: string | null;
   created_at?: string | null;
 }
 
@@ -136,6 +140,44 @@ function getCommissionValue(row: CommissionRow) {
   return row.commission_amount ?? row.total_commission ?? row.amount ?? 0;
 }
 
+function isDateActive(startValue?: string | null, endValue?: string | null) {
+  const now = Date.now();
+  const startTime = startValue ? new Date(startValue).getTime() : null;
+  const endTime = endValue ? new Date(endValue).getTime() : null;
+
+  if (startTime !== null && Number.isNaN(startTime)) return false;
+  if (endTime === null || Number.isNaN(endTime)) return false;
+
+  return (startTime === null || startTime <= now) && endTime > now;
+}
+
+function isSubscriptionActive(subscription?: SubscriptionRow) {
+  if (!subscription) return false;
+  if ((subscription.status || '').toLowerCase() !== 'active') return false;
+
+  if (!subscription.paid_until) return true;
+
+  const paidUntilTime = new Date(subscription.paid_until).getTime();
+  if (Number.isNaN(paidUntilTime)) return false;
+
+  return paidUntilTime > Date.now();
+}
+
+function getEffectiveSubscriptionStatus(merchant: MerchantRow, subscription?: SubscriptionRow) {
+  const hasActivePromo =
+    merchant.promo_enabled === true &&
+    isDateActive(merchant.promo_started_at, merchant.promo_expires_at);
+  const hasActiveSubscription = isSubscriptionActive(subscription);
+
+  if (hasActivePromo && hasActiveSubscription) return 'Cancelling';
+  if (hasActivePromo) return 'Promo';
+  if (hasActiveSubscription) return 'Active';
+  if (subscription?.status) return 'Cancelling';
+
+  return 'Inactive';
+}
+
+
 export const AdminAgentsTab: React.FC = () => {
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
@@ -166,10 +208,10 @@ export const AdminAgentsTab: React.FC = () => {
     }, {});
   }, [plans]);
 
-  const subscriptionStatusMap = useMemo(() => {
-    return subscriptions.reduce<Record<string, string>>((acc, subscription) => {
+  const subscriptionMap = useMemo(() => {
+    return subscriptions.reduce<Record<string, SubscriptionRow>>((acc, subscription) => {
       if (subscription.merchant_id && !acc[subscription.merchant_id]) {
-        acc[subscription.merchant_id] = subscription.status || '—';
+        acc[subscription.merchant_id] = subscription;
       }
       return acc;
     }, {});
@@ -239,14 +281,14 @@ export const AdminAgentsTab: React.FC = () => {
           .order('province', { ascending: true }),
         supabase
           .from('merchants')
-          .select('id, name, email, province, agent_id, agent_code_used, agent_assigned_at, agent_assignment_locked, status, subscription_plan_id')
+          .select('id, name, email, province, agent_id, agent_code_used, agent_assigned_at, agent_assignment_locked, status, subscription_plan_id, promo_enabled, promo_started_at, promo_expires_at')
           .order('name', { ascending: true }),
         supabase
           .from('subscription_plans')
           .select('id, name'),
         supabase
           .from('subscriptions')
-          .select('merchant_id, status, created_at')
+          .select('merchant_id, status, paid_until, created_at')
           .order('created_at', { ascending: false }),
         supabase
           .from('agent_commissions')
@@ -739,7 +781,7 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{merchant.province || '—'}</TableCell>
                         <TableCell>{getAgentName(agentMap[merchant.agent_id || ''])}</TableCell>
                         <TableCell>{merchant.subscription_plan_id ? planMap[merchant.subscription_plan_id] || '—' : '—'}</TableCell>
-                        <TableCell>{subscriptionStatusMap[merchant.id] || '—'}</TableCell>
+                        <TableCell>{getEffectiveSubscriptionStatus(merchant, subscriptionMap[merchant.id])}</TableCell>
                         <TableCell>{formatDate(merchant.agent_assigned_at)}</TableCell>
                         <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
                       </TableRow>
