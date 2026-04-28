@@ -5,7 +5,7 @@ import AdminHeader from './AdminHeader';
 import AdminStats from './AdminStats';
 import AdminUserTable from './AdminUserTable';
 import AdminSubscriptionsTab from './AdminSubscriptionsTab';
-import AdminAgentsTab from './AdminPlanEditor';
+import AdminAgentsTab from './AdminAgentsTab';
 import AdminUserManagement from './AdminUserManagement';
 import AdminEmailSettings from './AdminEmailSettings';
 import { HomeButton } from './HomeButton';
