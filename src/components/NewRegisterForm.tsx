@@ -101,16 +101,25 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       });
 
       if (error) {
-        setError(error.message);
-        setLoading(false); // reset ONLY on failure
+        const message = error.message || "";
+        const isTimeout =
+          message.includes("504") ||
+          message.toLowerCase().includes("timed out") ||
+          message.toLowerCase().includes("timeout");
+
+        if (isTimeout) {
+          localStorage.setItem("pending_verification_email", email);
+          window.location.replace("/verify-email");
+          return;
+        }
+
+        setError(message);
+        setLoading(false); // reset ONLY on non-timeout failure
         signupInProgressRef.current = false;
         return;
       }
 
-      localStorage.setItem(
-        "pending_verification_email",
-        email
-      );
+      localStorage.setItem("pending_verification_email", email);
 
       // SUCCESS → keep loading true until redirect completes
       window.location.replace("/verify-email");
