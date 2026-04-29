@@ -53,6 +53,15 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
     );
   };
 
+  const isSignupTimeoutError = (message: string): boolean => {
+    const normalizedMessage = message.toLowerCase();
+    return (
+      normalizedMessage.includes("504") ||
+      normalizedMessage.includes("timed out") ||
+      normalizedMessage.includes("timeout")
+    );
+  };
+
   const handleRegisterClick = () => {
     setError("");
 
@@ -101,20 +110,14 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       });
 
       if (error) {
-        const message = error.message || "";
-        const isTimeout =
-          message.includes("504") ||
-          message.toLowerCase().includes("timed out") ||
-          message.toLowerCase().includes("timeout");
-
-        if (isTimeout) {
+        if (isSignupTimeoutError(error.message)) {
           localStorage.setItem("pending_verification_email", email);
           window.location.replace("/verify-email");
           return;
         }
 
-        setError(message);
-        setLoading(false); // reset ONLY on non-timeout failure
+        setError(error.message);
+        setLoading(false); // reset ONLY on failure
         signupInProgressRef.current = false;
         return;
       }
@@ -126,6 +129,15 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       return;
     } catch (err) {
       console.error("Registration error:", err);
+
+      const message = err instanceof Error ? err.message : "";
+
+      if (isSignupTimeoutError(message)) {
+        localStorage.setItem("pending_verification_email", email);
+        window.location.replace("/verify-email");
+        return;
+      }
+
       setError("Registration failed. Please try again.");
       setLoading(false); // reset on error
       signupInProgressRef.current = false;
@@ -187,7 +199,6 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       >
         {step === 2 && (
           <div className="space-y-4">
-
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Registration</h3>
               <button
@@ -247,17 +258,13 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
                 disabled={loading || !isFormValid()}
                 className="w-full min-h-[48px] bg-green-600 hover:bg-green-700"
               >
-{loading
-  ? `Signing up as ${
-      accountType === "customer"
-        ? "Diner"
-        : "Restaurant"
-    }...`
-  : `Sign up as ${
-      accountType === "customer"
-        ? "Diner"
-        : "Restaurant"
-    }`}
+                {loading
+                  ? `Signing up as ${
+                      accountType === "customer" ? "Diner" : "Restaurant"
+                    }...`
+                  : `Sign up as ${
+                      accountType === "customer" ? "Diner" : "Restaurant"
+                    }`}
               </Button>
             </div>
 
