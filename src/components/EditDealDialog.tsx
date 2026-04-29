@@ -129,6 +129,40 @@ const getMediaLimitForPlan = (planName?: string | null, features?: any) => {
   return STARTER_MEDIA_LIMIT;
 };
 
+const getMediaLimitForDealLimit = (dealLimit?: number | null) => {
+  if (dealLimit === 5) return CHEFS_TABLE_MEDIA_LIMIT;
+  if (dealLimit === 3) return MAIN_COURSE_MEDIA_LIMIT;
+  return STARTER_MEDIA_LIMIT;
+};
+
+const getPlanNameForDealLimit = (dealLimit?: number | null) => {
+  if (dealLimit === 5) return "Chef's Table";
+  if (dealLimit === 3) return 'Main Course';
+  return 'Starter';
+};
+
+const extractEffectiveDealLimit = (value: any): number | null => {
+  const row = Array.isArray(value) ? value[0] : value;
+
+  if (typeof row === 'number') return row;
+  if (!row || typeof row !== 'object') return null;
+
+  const candidates = [
+    row.deal_limit,
+    row.effective_deal_limit,
+    row.max_deals,
+    row.limit,
+    row.allowed_deals,
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = typeof candidate === 'number' ? candidate : parseInt(String(candidate), 10);
+    if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  return null;
+};
+
 export const EditDealDialog: React.FC<EditDealDialogProps> = ({
   deal,
   open,
@@ -528,6 +562,23 @@ export const EditDealDialog: React.FC<EditDealDialogProps> = ({
             ? merchantRow.website.trim()
             : 'dinedeals.co.za'
         );
+
+        const { data: effectiveLimitRow, error: effectiveLimitError } = await supabase.rpc(
+          'get_effective_deal_limit',
+          { p_merchant_id: merchantId }
+        );
+
+        if (effectiveLimitError) {
+          console.warn('Could not load effective deal limit for media limit', effectiveLimitError);
+        }
+
+        const effectiveDealLimit = extractEffectiveDealLimit(effectiveLimitRow);
+
+        if (effectiveDealLimit) {
+          setPlanName(getPlanNameForDealLimit(effectiveDealLimit));
+          setMaxMediaItems(getMediaLimitForDealLimit(effectiveDealLimit));
+          return;
+        }
 
         const { data: subscriptionRow, error: subscriptionError } = await supabase
           .from('subscriptions')
