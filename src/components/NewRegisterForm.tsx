@@ -54,8 +54,6 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
   };
 
   const handleRegisterClick = () => {
-    if (loading || signupInProgressRef.current) return;
-
     setError("");
 
     if (!formData.email || !formData.password || !formData.confirmPassword) {
@@ -78,14 +76,6 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       return;
     }
 
-    const email = formData.email.trim().toLowerCase();
-    const pendingEmail = localStorage.getItem("pending_verification_email");
-
-    if (pendingEmail === email) {
-      window.location.replace("/verify-email");
-      return;
-    }
-
     setShowConfirmModal(true);
   };
 
@@ -97,14 +87,6 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
     setShowConfirmModal(false);
 
     const email = formData.email.trim().toLowerCase();
-    const pendingEmail = localStorage.getItem("pending_verification_email");
-
-    if (pendingEmail === email) {
-      window.location.replace("/verify-email");
-      return;
-    }
-
-    localStorage.setItem("pending_verification_email", email);
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -131,19 +113,19 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
           return;
         }
 
-        localStorage.removeItem("pending_verification_email");
         setError(message);
         setLoading(false); // reset ONLY on non-timeout failure
         signupInProgressRef.current = false;
         return;
       }
 
+      localStorage.setItem("pending_verification_email", email);
+
       // SUCCESS → keep loading true until redirect completes
       window.location.replace("/verify-email");
       return;
     } catch (err) {
       console.error("Registration error:", err);
-      localStorage.removeItem("pending_verification_email");
       setError("Registration failed. Please try again.");
       setLoading(false); // reset on error
       signupInProgressRef.current = false;
@@ -281,11 +263,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
 
             <RegistrationConfirmationModal
               open={showConfirmModal}
-              onClose={() => {
-                if (!loading && !signupInProgressRef.current) {
-                  setShowConfirmModal(false);
-                }
-              }}
+              onClose={() => setShowConfirmModal(false)}
               accountType={accountType}
               email={formData.email}
               onConfirm={handleConfirmRegistration}
