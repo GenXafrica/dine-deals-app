@@ -54,6 +54,8 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
   };
 
   const handleRegisterClick = () => {
+    if (loading || signupInProgressRef.current) return;
+
     setError("");
 
     if (!formData.email || !formData.password || !formData.confirmPassword) {
@@ -77,6 +79,11 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
     }
 
     setShowConfirmModal(true);
+  };
+
+  const handleCloseConfirmModal = () => {
+    if (loading || signupInProgressRef.current) return;
+    setShowConfirmModal(false);
   };
 
   const handleConfirmRegistration = async () => {
@@ -263,7 +270,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
 
             <RegistrationConfirmationModal
               open={showConfirmModal}
-              onClose={() => setShowConfirmModal(false)}
+              onClose={handleCloseConfirmModal}
               accountType={accountType}
               email={formData.email}
               onConfirm={handleConfirmRegistration}
