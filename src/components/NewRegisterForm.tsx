@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const signupInProgressRef = useRef(false);
 
   const selectAccountType = (type: "customer" | "merchant") => {
     setAccountType(type);
@@ -79,14 +80,17 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
   };
 
   const handleConfirmRegistration = async () => {
-    if (loading) return;
+    if (loading || signupInProgressRef.current) return;
 
+    signupInProgressRef.current = true;
     setLoading(true);
     setShowConfirmModal(false);
 
+    const email = formData.email.trim().toLowerCase();
+
     try {
       const { error } = await supabase.auth.signUp({
-        email: formData.email,
+        email,
         password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -99,12 +103,13 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       if (error) {
         setError(error.message);
         setLoading(false); // reset ONLY on failure
+        signupInProgressRef.current = false;
         return;
       }
 
       localStorage.setItem(
         "pending_verification_email",
-        formData.email
+        email
       );
 
       // SUCCESS → keep loading true until redirect completes
@@ -114,6 +119,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       console.error("Registration error:", err);
       setError("Registration failed. Please try again.");
       setLoading(false); // reset on error
+      signupInProgressRef.current = false;
     }
   };
 
