@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ export const RegistrationConfirmationModal: React.FC<
 }) => {
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const confirmLockRef = useRef(false);
   const navigate = useNavigate();
 
   const isDiner = accountType === "customer";
@@ -37,14 +38,16 @@ export const RegistrationConfirmationModal: React.FC<
   const Icon = isDiner ? Utensils : Store;
 
   const handleCancel = () => {
-    if (loading || submitting) return;
+    if (loading || submitting || confirmLockRef.current) return;
     setConfirmed(false);
     onClose();
     navigate("/");
   };
 
   const handleConfirm = () => {
-    if (!confirmed || loading || submitting) return;
+    if (!confirmed || loading || submitting || confirmLockRef.current) return;
+
+    confirmLockRef.current = true;
     setSubmitting(true);
     onConfirm();
   };
@@ -63,7 +66,7 @@ export const RegistrationConfirmationModal: React.FC<
 
         <div
           onClick={() => {
-            if (loading || submitting) return;
+            if (loading || submitting || confirmLockRef.current) return;
             setConfirmed(true);
           }}
           className={`
@@ -103,17 +106,17 @@ export const RegistrationConfirmationModal: React.FC<
         <div className="mt-5 flex flex-col gap-2">
           <Button
             onClick={handleConfirm}
-            disabled={!confirmed || loading || submitting}
+            disabled={!confirmed || loading || submitting || confirmLockRef.current}
             className="w-full rounded-lg bg-green-600 hover:bg-green-700 text-white"
           >
-            {loading || submitting ? "Creating..." : "Create Account"}
+            {loading || submitting || confirmLockRef.current ? "Creating..." : "Create Account"}
           </Button>
 
           <Button
             variant="outline"
             onClick={handleCancel}
             className="w-full rounded-lg"
-            disabled={loading || submitting}
+            disabled={loading || submitting || confirmLockRef.current}
           >
             Cancel
           </Button>
