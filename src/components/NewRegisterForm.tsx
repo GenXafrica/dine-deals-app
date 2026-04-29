@@ -12,6 +12,49 @@ interface NewRegisterFormProps {
   userType?: "customer" | "merchant";
 }
 
+let activeSignupEmail = "";
+let activeSignupStartedAt = 0;
+const SIGNUP_LOCK_MS = 120000;
+
+const isRecentSignupLock = (email: string): boolean => {
+  if (!email) return false;
+
+  const now = Date.now();
+
+  if (activeSignupEmail === email && now - activeSignupStartedAt < SIGNUP_LOCK_MS) {
+    return true;
+  }
+
+  const stored = sessionStorage.getItem("signup_request_lock");
+  if (!stored) return false;
+
+  try {
+    const parsed = JSON.parse(stored) as { email?: string; startedAt?: number };
+    return (
+      parsed.email === email &&
+      typeof parsed.startedAt === "number" &&
+      now - parsed.startedAt < SIGNUP_LOCK_MS
+    );
+  } catch {
+    return false;
+  }
+};
+
+const setSignupLock = (email: string) => {
+  activeSignupEmail = email;
+  activeSignupStartedAt = Date.now();
+  sessionStorage.setItem(
+    "signup_request_lock",
+    JSON.stringify({ email, startedAt: activeSignupStartedAt })
+  );
+};
+
+const clearSignupLock = () => {
+  activeSignupEmail = "";
+  activeSignupStartedAt = 0;
+  sessionStorage.removeItem("signup_request_lock");
+};
+
 export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
   onSuccess,
   userType = "customer",
@@ -81,19 +124,15 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
     setShowConfirmModal(true);
   };
 
-  const handleCloseConfirmModal = () => {
-    if (loading || signupInProgressRef.current) return;
-    setShowConfirmModal(false);
-  };
-
   const handleConfirmRegistration = async () => {
-    if (loading || signupInProgressRef.current) return;
+    const email = formData.email.trim().toLowerCase();
+
+    if (loading || signupInProgressRef.current || isRecentSignupLock(email)) return;
 
     signupInProgressRef.current = true;
+    setSignupLock(email);
     setLoading(true);
     setShowConfirmModal(false);
-
-    const email = formData.email.trim().toLowerCase();
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -123,6 +162,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
         setError(message);
         setLoading(false); // reset ONLY on non-timeout failure
         signupInProgressRef.current = false;
+        clearSignupLock();
         return;
       }
 
@@ -136,6 +176,7 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       setError("Registration failed. Please try again.");
       setLoading(false); // reset on error
       signupInProgressRef.current = false;
+      clearSignupLock();
     }
   };
 
@@ -270,7 +311,11 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
 
             <RegistrationConfirmationModal
               open={showConfirmModal}
-              onClose={handleCloseConfirmModal}
+              onClose={() => {
+                if (!loading && !signupInProgressRef.current) {
+                  setShowConfirmModal(false);
+                }
+              }}
               accountType={accountType}
               email={formData.email}
               onConfirm={handleConfirmRegistration}
