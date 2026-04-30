@@ -14,7 +14,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Loader2, RefreshCw, Save, Users } from 'lucide-react';
-import { PhoneInput } from '@/components/ui/PhoneInput';
 
 interface AgentRow {
   id: string;
@@ -628,7 +627,7 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
               <div>
                 <Label>Telephone</Label>
-                <PhoneInput
+                <Input type="tel"
                   value={form.telephone}
                   onChange={(value) => setForm({ ...form, telephone: cleanInternationalPhone(value) })}
                   includeCountryCode
@@ -636,7 +635,7 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
               <div>
                 <Label>WhatsApp</Label>
-                <PhoneInput
+                <Input type="tel"
                   value={form.whatsapp}
                   onChange={(value) => setForm({ ...form, whatsapp: cleanInternationalPhone(value) })}
                   includeCountryCode
