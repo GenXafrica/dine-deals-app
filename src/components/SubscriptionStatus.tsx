@@ -17,6 +17,9 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
   const [planName, setPlanName] = useState<string | null>(null);
   const [pendingPlanName, setPendingPlanName] = useState<string | null>(null);
   const [promoPlanName, setPromoPlanName] = useState<string | null>(null);
+  const [merchantPlanName, setMerchantPlanName] = useState<string | null>(null);
+  const [merchantPlanSlug, setMerchantPlanSlug] = useState<string | null>(null);
+  const [latestInactiveSubscription, setLatestInactiveSubscription] = useState<any>(null);
   const [dealLimit, setDealLimit] = useState<number | null>(null);
   const [cancellingDowngrade, setCancellingDowngrade] = useState(false);
 
@@ -30,6 +33,9 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
       setPlanName(null);
       setPendingPlanName(null);
       setPromoPlanName(null);
+      setMerchantPlanName(null);
+      setMerchantPlanSlug(null);
+      setLatestInactiveSubscription(null);
       setDealLimit(null);
       return;
     }
@@ -41,6 +47,9 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
       setPlanName(null);
       setPendingPlanName(null);
       setPromoPlanName(null);
+      setMerchantPlanName(null);
+      setMerchantPlanSlug(null);
+      setLatestInactiveSubscription(null);
       setDealLimit(null);
       return;
     }
@@ -54,15 +63,35 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
     const resolvedMerchant = merchantLive ?? merchantRow;
     setMerchantData(resolvedMerchant);
 
+    if (resolvedMerchant?.subscription_plan_id) {
+      const { data: merchantPlan } = await supabase
+        .from('subscription_plans')
+        .select('name, slug')
+        .eq('id', resolvedMerchant.subscription_plan_id)
+        .maybeSingle();
+
+      setMerchantPlanName(merchantPlan?.name ?? null);
+      setMerchantPlanSlug(merchantPlan?.slug ?? null);
+    } else {
+      setMerchantPlanName(null);
+      setMerchantPlanSlug(null);
+    }
+
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('merchant_id', merchantRow.id)
-      .eq('status', 'active')
-      .limit(1);
+      .in('status', ['active', 'expired', 'cancelled'])
+      .order('updated_at', { ascending: false })
+      .limit(10);
 
-    const sub = subs?.[0] ?? null;
+    const sub = subs?.find((item) => item?.status === 'active') ?? null;
+    const inactiveSub = subs?.find((item) =>
+      item?.status === 'expired' || item?.status === 'cancelled'
+    ) ?? null;
+
     setSubscription(sub);
+    setLatestInactiveSubscription(inactiveSub);
 
     const currentPlanId = sub?.plan_id ?? sub?.subscription_plan_id ?? null;
 
@@ -234,7 +263,7 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
     merchantData?.promo_expires_at !== null;
   const planLabel = isPromo
     ? `${promoPlanName || planName || 'Promo'} Promo`
-    : (planName || 'No active plan');
+    : (planName || merchantPlanName || 'No active plan');
 
   const billingCycleLabel = subscription?.billing_cycle === 'annual'
     ? 'Annual'
@@ -269,6 +298,16 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
   const showPromoExpiry =
     isPromo &&
     !!merchantData?.promo_expires_at;
+
+  const merchantPlanIsStarter =
+    merchantPlanSlug?.toLowerCase() === 'starter' ||
+    merchantPlanName?.toLowerCase() === 'starter';
+
+  const showInactiveStarterBanner =
+    !isPromo &&
+    !subscription &&
+    !!latestInactiveSubscription &&
+    merchantPlanIsStarter;
 
   const getTierIcon = () => {
     if (isPromo) return <Star className="h-5 w-5 text-amber-500" />;
@@ -324,6 +363,17 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
                 {formatDateZA(merchantData.promo_expires_at)}
               </span>
               .
+            </p>
+          </div>
+        )}
+
+        {showInactiveStarterBanner && (
+          <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+            <p className="text-sm text-amber-900 font-medium">
+              Inactive Starter
+            </p>
+            <p className="text-sm text-amber-800">
+              Your subscription is inactive. Please manage your subscription to create, edit or delete deals.
             </p>
           </div>
         )}
