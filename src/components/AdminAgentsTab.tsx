@@ -130,6 +130,11 @@ function formatMoney(value?: number | null) {
   return `R ${safeValue.toFixed(2).replace('.', ',')}`;
 }
 
+function normalizeInternationalPhone(value?: string | null) {
+  const cleaned = (value || '').replace(/\D/g, '');
+  return cleaned || null;
+}
+
 function getAgentName(agent?: AgentRow) {
   if (!agent) return '—';
   const name = `${agent.first_name || ''} ${agent.last_name || ''}`.trim();
@@ -384,8 +389,8 @@ export const AdminAgentsTab: React.FC = () => {
       first_name: agent.first_name || '',
       last_name: agent.last_name || '',
       email_address: agent.email_address || '',
-      telephone: agent.telephone || '',
-      whatsapp: agent.whatsapp || '',
+      telephone: normalizeInternationalPhone(agent.telephone) || '',
+      whatsapp: normalizeInternationalPhone(agent.whatsapp) || '',
       province: agent.province || '',
       agent_code: agent.agent_code || '',
       commission_percent: String(agent.commission_percent ?? 20),
@@ -411,8 +416,8 @@ export const AdminAgentsTab: React.FC = () => {
         first_name: form.first_name.trim() || null,
         last_name: form.last_name.trim() || null,
         email_address: form.email_address.trim().toLowerCase(),
-        telephone: form.telephone.trim() || null,
-        whatsapp: form.whatsapp.trim() || null,
+        telephone: normalizeInternationalPhone(form.telephone),
+        whatsapp: normalizeInternationalPhone(form.whatsapp),
         province: form.province,
         agent_code: form.agent_code.trim().toUpperCase(),
         commission_percent: Number(form.commission_percent || 20),
@@ -625,14 +630,14 @@ export const AdminAgentsTab: React.FC = () => {
                 <Label>Telephone</Label>
                 <Input
                   value={form.telephone}
-                  onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+                  onChange={(e) => setForm({ ...form, telephone: e.target.value.replace(/\D/g, '') })}
                 />
               </div>
               <div>
                 <Label>WhatsApp</Label>
                 <Input
                   value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value.replace(/\D/g, '') })}
                 />
               </div>
               <div>
