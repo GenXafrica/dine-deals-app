@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { PhoneInput } from '@/components/PhoneInput';
 import { Loader2, RefreshCw, Save, Users } from 'lucide-react';
 
 interface AgentRow {
@@ -628,16 +629,18 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
               <div>
                 <Label>Telephone</Label>
-                <Input
+                <PhoneInput
                   value={form.telephone}
-                  onChange={(e) => setForm({ ...form, telephone: e.target.value.replace(/\D/g, '') })}
+                  onChange={(value) => setForm({ ...form, telephone: (value || '').replace(/\D/g, '') })}
+                  includeCountryCode
                 />
               </div>
               <div>
                 <Label>WhatsApp</Label>
-                <Input
+                <PhoneInput
                   value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value.replace(/\D/g, '') })}
+                  onChange={(value) => setForm({ ...form, whatsapp: (value || '').replace(/\D/g, '') })}
+                  includeCountryCode
                 />
               </div>
               <div>
