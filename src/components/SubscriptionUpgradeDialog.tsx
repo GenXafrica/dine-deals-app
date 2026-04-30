@@ -51,6 +51,7 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
     const [pendingPlan, setPendingPlan] = useState<{
       slug: string;
       amount: number;
+      displayAmount?: number;
       billingCycle: 'monthly' | 'annual';
       type: PendingPlanType;
       isPromo?: boolean;
@@ -189,6 +190,54 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
       return `Free for ${days} days`;
     };
 
+    const getPlanAmountForCycle = (
+      plan: any,
+      cycle: 'monthly' | 'annual'
+    ) => {
+      if (!plan) return 0;
+
+      if (plan.slug === 'starter') return 75;
+
+      return cycle === 'annual'
+        ? Number(plan.yearly_price || 0)
+        : Number(plan.monthly_price || 0);
+    };
+
+    const calculateProratedUpgradeDisplayAmount = (
+      selectedPlan: any,
+      selectedAmount: number,
+      changeType: PendingPlanType
+    ) => {
+      if (changeType !== 'upgrade') return selectedAmount;
+      if (normalizedBillingCycle !== billingCycle) return selectedAmount;
+
+      const paidUntilValue = (subscription as any)?.paid_until;
+      const currentPlan = plans.find(plan => plan.slug === normalizedTier);
+
+      if (!paidUntilValue || !currentPlan) return selectedAmount;
+
+      const paidUntil = new Date(paidUntilValue).getTime();
+      const now = Date.now();
+
+      if (!Number.isFinite(paidUntil) || paidUntil <= now) return selectedAmount;
+
+      const cycleLengthMs =
+        billingCycle === 'annual'
+          ? 365 * 24 * 60 * 60 * 1000
+          : 30 * 24 * 60 * 60 * 1000;
+
+      const remainingRatio = Math.min(
+        Math.max((paidUntil - now) / cycleLengthMs, 0),
+        1
+      );
+      const currentAmount = getPlanAmountForCycle(currentPlan, billingCycle);
+      const priceDifference = selectedAmount - currentAmount;
+
+      if (priceDifference <= 0) return selectedAmount;
+
+      return Math.round(priceDifference * remainingRatio * 100) / 100;
+    };
+
     const orderedPlans = [...plans].sort((a, b) => {
       const aIsPromo = isPromoPlan(a) ? 1 : 0;
       const bIsPromo = isPromoPlan(b) ? 1 : 0;
@@ -254,9 +303,16 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
             : 'upgrade';
         }
 
+        const displayAmount = calculateProratedUpgradeDisplayAmount(
+          plan,
+          amount,
+          type
+        );
+
         setPendingPlan({
           slug: selectedSlug,
           amount,
+          displayAmount,
           billingCycle,
           type,
           isPromo: planIsPromo,
@@ -699,7 +755,9 @@ export const SubscriptionUpgradeDialog: React.FC<SubscriptionUpgradeDialogProps>
                 <p>
                   You will be billed{' '}
                   <strong>
-                    {formatZAR(pendingPlan.amount)}/
+                    {formatZAR(
+                      pendingPlan.displayAmount ?? pendingPlan.amount
+                    )}/
                     {pendingPlan.billingCycle === 'annual'
                       ? 'year'
                       : 'month'}
