@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/PhoneInput';
 import { Label } from '@/components/ui/label';
 import {
   Table,
@@ -627,7 +628,7 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
               <div>
                 <Label>Telephone</Label>
-                <Input type="tel"
+                <PhoneInput
                   value={form.telephone}
                   onChange={(value) => setForm({ ...form, telephone: cleanInternationalPhone(value) })}
                   includeCountryCode
@@ -635,7 +636,7 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
               <div>
                 <Label>WhatsApp</Label>
-                <Input type="tel"
+                <PhoneInput
                   value={form.whatsapp}
                   onChange={(value) => setForm({ ...form, whatsapp: cleanInternationalPhone(value) })}
                   includeCountryCode

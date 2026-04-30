@@ -47,10 +47,9 @@ const getCodeDigits = (code: string) => (code || '').replace(/\D/g, '');
 
 const formatLoose = (digits: string) => {
   if (!digits) return '';
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-  if (digits.length <= 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-  return digits;
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+  return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 9)}`;
 };
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
@@ -164,15 +163,15 @@ setValidationError('');
 
       <div className="flex gap-2 items-stretch">
         <Select value={countryCode} onValueChange={handleCountryChange}>
-          <SelectTrigger className="w-28 min-w-[7rem]">
-            <SelectValue>
-              {selectedCountry && (
-                <span className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="text-lg leading-none">{selectedCountry.flag}</span>
-                  <span className="font-medium">{selectedCountry.code}</span>
-                </span>
-              )}
-            </SelectValue>
+          <SelectTrigger className="w-24 min-w-[6rem]">
+            {selectedCountry ? (
+              <span className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-xs font-medium">{selectedCountry.country}</span>
+                <span className="font-medium">{selectedCountry.code}</span>
+              </span>
+            ) : (
+              <SelectValue />
+            )}
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {countryCodes.map((country, index) => (
@@ -181,7 +180,7 @@ setValidationError('');
                 value={country.code}
               >
                 <span className="flex items-center gap-2">
-                  <span>{country.flag}</span>
+                  <span className="text-xs font-medium">{country.country}</span>
                   <span>{country.code}</span>
                   <span className="text-sm text-gray-500 truncate">
                     {country.name}
@@ -196,14 +195,7 @@ setValidationError('');
           <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
           <Input
             id={inputId}
-            value={
-              countryCode === '+27'
-                ? nationalDigits.replace(
-                    /^(\d{2})(\d{3})(\d{0,4}).*$/,
-                    (_m, a, b, c) => [a, b, c].filter(Boolean).join(' ')
-                  )
-                : formatLoose(nationalDigits)
-            }
+            value={formatLoose(nationalDigits)}
             onChange={handlePhoneChange}
             className={`pl-10 ${className} ${hasError ? 'border-red-500' : ''}`}
             placeholder={placeholder}
