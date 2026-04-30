@@ -427,11 +427,24 @@ export const AdminAgentsTab: React.FC = () => {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('agents')
-          .insert(payload);
+        const { data, error } = await supabase.rpc('admin_save_agent', {
+          p_user_id: payload.user_id,
+          p_first_name: payload.first_name,
+          p_last_name: payload.last_name,
+          p_email_address: payload.email_address,
+          p_telephone: payload.telephone,
+          p_whatsapp: payload.whatsapp,
+          p_province: payload.province,
+          p_agent_code: payload.agent_code,
+          p_commission_percent: payload.commission_percent,
+          p_status: payload.status,
+        });
 
         if (error) throw error;
+
+        if (!data?.ok) {
+          throw new Error(data?.error || 'The agent was not saved.');
+        }
       }
 
       toast({
