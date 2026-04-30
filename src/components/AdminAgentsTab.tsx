@@ -591,6 +591,106 @@ export const AdminAgentsTab: React.FC = () => {
             </div>
           </div>
 
+          {loading ? (
+            <div className="text-sm text-gray-600">Loading…</div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Agents Overview</div>
+                  <div className="text-sm text-gray-600">Agent-level status, merchant count and pending commission total.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agent Name</TableHead>
+                        <TableHead>Province</TableHead>
+                        <TableHead>Agent Code</TableHead>
+                        <TableHead>Agent Status</TableHead>
+                        <TableHead>Assigned Merchants</TableHead>
+                        <TableHead>Pending Commission</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agentPerformance.map(({ agent, assignedMerchantCount, commissionTotal }) => (
+                      <TableRow key={agent.id}>
+                        <TableCell>{getAgentName(agent)}</TableCell>
+                        <TableCell>{agent.province || '—'}</TableCell>
+                        <TableCell>{agent.agent_code || '—'}</TableCell>
+                        <TableCell>{agent.status || '—'}</TableCell>
+                        <TableCell>{assignedMerchantCount}</TableCell>
+                        <TableCell>{formatMoney(commissionTotal)}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            onClick={() => editAgent(agent)}
+                            className="bg-[#2463EB] hover:bg-[#1D4ED8] text-white"
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Commission Payouts</div>
+                  <div className="text-sm text-gray-600">Commission amount, payout status and paid date.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead>Agent</TableHead>
+                        <TableHead>Commission Amount</TableHead>
+                        <TableHead>Payout Status</TableHead>
+                        <TableHead>Paid Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {commissions.map((commission, index) => (
+                      <TableRow key={commission.id || `${commission.agent_id}-${commission.commission_month}-${index}`}>
+                        <TableCell>{formatDate(commission.commission_month)}</TableCell>
+                        <TableCell>{getAgentName(agentMap[commission.agent_id || ''])}</TableCell>
+                        <TableCell>{formatMoney(getCommissionValue(commission))}</TableCell>
+                        <TableCell>{commission.status || '—'}</TableCell>
+                        <TableCell>{formatDate(commission.paid_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+            <div className="font-semibold text-gray-900">Commission operations</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Commission month</Label>
+                <Input
+                  type="date"
+                  value={commissionMonth}
+                  onChange={(e) => setCommissionMonth(e.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={calculateCommissions} disabled={calculatingCommission}>
+                  {calculatingCommission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Calculate month
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-lg border border-gray-200 p-4 space-y-4">
             <div className="font-semibold text-gray-900">
               {form.id ? `Edit agent: ${form.first_name || form.email_address || form.agent_code}` : 'Add agent'}
@@ -703,6 +803,43 @@ export const AdminAgentsTab: React.FC = () => {
             </div>
           </div>
 
+          {!loading ? (
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-gray-900">Merchant Assignments</div>
+                  <div className="text-sm text-gray-600">Merchant plan, subscription status and agent assignment lock details.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Merchant</TableHead>
+                        <TableHead>Province</TableHead>
+                        <TableHead>Assigned Agent</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Subscription Status</TableHead>
+                        <TableHead>Assigned Date</TableHead>
+                        <TableHead>Assignment Locked</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {merchants.map((merchant) => (
+                      <TableRow key={merchant.id}>
+                        <TableCell>{merchant.name || merchant.email || '—'}</TableCell>
+                        <TableCell>{merchant.province || '—'}</TableCell>
+                        <TableCell>{getAgentName(agentMap[merchant.agent_id || ''])}</TableCell>
+                        <TableCell>{merchant.subscription_plan_id ? planMap[merchant.subscription_plan_id] || '—' : '—'}</TableCell>
+                        <TableCell>{getEffectiveSubscriptionStatus(merchant, subscriptionMap[merchant.id])}</TableCell>
+                        <TableCell>{formatDate(merchant.agent_assigned_at)}</TableCell>
+                        <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
+                      </TableRow>
+                    ))}
+                    </TableBody>
+                  </Table>
+                </div>
+            </div>
+          ) : null}
+
           <div className="rounded-lg border border-gray-200 p-4 space-y-4">
             <div className="font-semibold text-gray-900">Manual merchant assignment</div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -743,143 +880,7 @@ export const AdminAgentsTab: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-200 p-4 space-y-4">
-            <div className="font-semibold text-gray-900">Commission operations</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Commission month</Label>
-                <Input
-                  type="date"
-                  value={commissionMonth}
-                  onChange={(e) => setCommissionMonth(e.target.value)}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={calculateCommissions} disabled={calculatingCommission}>
-                  {calculatingCommission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  Calculate month
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-sm text-gray-600">Loading…</div>
-          ) : (
-            <div className="space-y-6">
-              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-                <div>
-                  <div className="font-semibold text-gray-900">Agents Overview</div>
-                  <div className="text-sm text-gray-600">Agent-level status, merchant count and pending commission total.</div>
-                </div>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Agent Name</TableHead>
-                        <TableHead>Province</TableHead>
-                        <TableHead>Agent Code</TableHead>
-                        <TableHead>Agent Status</TableHead>
-                        <TableHead>Assigned Merchants</TableHead>
-                        <TableHead>Pending Commission</TableHead>
-                        <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agentPerformance.map(({ agent, assignedMerchantCount, commissionTotal }) => (
-                      <TableRow key={agent.id}>
-                        <TableCell>{getAgentName(agent)}</TableCell>
-                        <TableCell>{agent.province || '—'}</TableCell>
-                        <TableCell>{agent.agent_code || '—'}</TableCell>
-                        <TableCell>{agent.status || '—'}</TableCell>
-                        <TableCell>{assignedMerchantCount}</TableCell>
-                        <TableCell>{formatMoney(commissionTotal)}</TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            onClick={() => editAgent(agent)}
-                            className="bg-[#2463EB] hover:bg-[#1D4ED8] text-white"
-                          >
-                            Edit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-                <div>
-                  <div className="font-semibold text-gray-900">Merchant Assignments</div>
-                  <div className="text-sm text-gray-600">Merchant plan, subscription status and agent assignment lock details.</div>
-                </div>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Merchant</TableHead>
-                        <TableHead>Province</TableHead>
-                        <TableHead>Assigned Agent</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Subscription Status</TableHead>
-                        <TableHead>Assigned Date</TableHead>
-                        <TableHead>Assignment Locked</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {merchants.map((merchant) => (
-                      <TableRow key={merchant.id}>
-                        <TableCell>{merchant.name || merchant.email || '—'}</TableCell>
-                        <TableCell>{merchant.province || '—'}</TableCell>
-                        <TableCell>{getAgentName(agentMap[merchant.agent_id || ''])}</TableCell>
-                        <TableCell>{merchant.subscription_plan_id ? planMap[merchant.subscription_plan_id] || '—' : '—'}</TableCell>
-                        <TableCell>{getEffectiveSubscriptionStatus(merchant, subscriptionMap[merchant.id])}</TableCell>
-                        <TableCell>{formatDate(merchant.agent_assigned_at)}</TableCell>
-                        <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
-                      </TableRow>
-                    ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-                <div>
-                  <div className="font-semibold text-gray-900">Commission Payouts</div>
-                  <div className="text-sm text-gray-600">Commission amount, payout status and paid date.</div>
-                </div>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Agent</TableHead>
-                        <TableHead>Commission Amount</TableHead>
-                        <TableHead>Payout Status</TableHead>
-                        <TableHead>Paid Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {commissions.map((commission, index) => (
-                      <TableRow key={commission.id || `${commission.agent_id}-${commission.commission_month}-${index}`}>
-                        <TableCell>{formatDate(commission.commission_month)}</TableCell>
-                        <TableCell>{getAgentName(agentMap[commission.agent_id || ''])}</TableCell>
-                        <TableCell>{formatMoney(getCommissionValue(commission))}</TableCell>
-                        <TableCell>{commission.status || '—'}</TableCell>
-                        <TableCell>{formatDate(commission.paid_at)}</TableCell>
-                      </TableRow>
-                    ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
+          </div>        </CardContent>
       </Card>
     </div>
   );
