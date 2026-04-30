@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { PhoneInput } from '@/components/PhoneInput';
 import { Loader2, RefreshCw, Save, Users } from 'lucide-react';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 
 interface AgentRow {
   id: string;
@@ -114,6 +114,10 @@ const emptyForm: AgentFormState = {
   status: 'active',
 };
 
+function cleanInternationalPhone(value: string) {
+  return (value || '').replace(/\D/g, '');
+}
+
 function getCurrentMonthValue() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -129,11 +133,6 @@ function formatDate(value?: string | null) {
 function formatMoney(value?: number | null) {
   const safeValue = Number(value ?? 0);
   return `R ${safeValue.toFixed(2).replace('.', ',')}`;
-}
-
-function normalizeInternationalPhone(value?: string | null) {
-  const cleaned = (value || '').replace(/\D/g, '');
-  return cleaned || null;
 }
 
 function getAgentName(agent?: AgentRow) {
@@ -390,8 +389,8 @@ export const AdminAgentsTab: React.FC = () => {
       first_name: agent.first_name || '',
       last_name: agent.last_name || '',
       email_address: agent.email_address || '',
-      telephone: normalizeInternationalPhone(agent.telephone) || '',
-      whatsapp: normalizeInternationalPhone(agent.whatsapp) || '',
+      telephone: cleanInternationalPhone(agent.telephone || ''),
+      whatsapp: cleanInternationalPhone(agent.whatsapp || ''),
       province: agent.province || '',
       agent_code: agent.agent_code || '',
       commission_percent: String(agent.commission_percent ?? 20),
@@ -417,8 +416,8 @@ export const AdminAgentsTab: React.FC = () => {
         first_name: form.first_name.trim() || null,
         last_name: form.last_name.trim() || null,
         email_address: form.email_address.trim().toLowerCase(),
-        telephone: normalizeInternationalPhone(form.telephone),
-        whatsapp: normalizeInternationalPhone(form.whatsapp),
+        telephone: cleanInternationalPhone(form.telephone) || null,
+        whatsapp: cleanInternationalPhone(form.whatsapp) || null,
         province: form.province,
         agent_code: form.agent_code.trim().toUpperCase(),
         commission_percent: Number(form.commission_percent || 20),
@@ -631,7 +630,7 @@ export const AdminAgentsTab: React.FC = () => {
                 <Label>Telephone</Label>
                 <PhoneInput
                   value={form.telephone}
-                  onChange={(value) => setForm({ ...form, telephone: (value || '').replace(/\D/g, '') })}
+                  onChange={(value) => setForm({ ...form, telephone: cleanInternationalPhone(value) })}
                   includeCountryCode
                 />
               </div>
@@ -639,7 +638,7 @@ export const AdminAgentsTab: React.FC = () => {
                 <Label>WhatsApp</Label>
                 <PhoneInput
                   value={form.whatsapp}
-                  onChange={(value) => setForm({ ...form, whatsapp: (value || '').replace(/\D/g, '') })}
+                  onChange={(value) => setForm({ ...form, whatsapp: cleanInternationalPhone(value) })}
                   includeCountryCode
                 />
               </div>
