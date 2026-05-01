@@ -70,7 +70,8 @@ function downloadCsvFile(filename: string, content: string) {
 
 export default function ModernAdminDashboard() {
   const [activeTab, setActiveTab] =
-    useState<'users' | 'subscriptions' | 'agents' | 'admins' | 'emails'>('users');
+    useState<'users' | 'subscriptions' | 'agents' | 'emails'>('users');
+  const [showAdminsModal, setShowAdminsModal] = useState(false);
 
   const [customers, setCustomers] = useState<AdminUser[]>([]);
   const [merchants, setMerchants] = useState<AdminUser[]>([]);
@@ -278,7 +279,14 @@ export default function ModernAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowAdminsModal(true)}
+          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        >
+          Manage Admins
+        </button>
         <HomeButton onClick={handleGoHome} />
       </div>
 
@@ -299,14 +307,15 @@ export default function ModernAdminDashboard() {
 
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={(value) =>
+            setActiveTab(value as 'users' | 'subscriptions' | 'agents' | 'emails')
+          }
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-5 bg-white border shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-white border shadow-sm">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="agents">Agents</TabsTrigger>
-            <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="emails">Emails</TabsTrigger>
           </TabsList>
 
@@ -332,15 +341,40 @@ export default function ModernAdminDashboard() {
             <AdminAgentsTab />
           </TabsContent>
 
-          <TabsContent value="admins">
-            <AdminUserManagement />
-          </TabsContent>
 
           <TabsContent value="emails">
             <AdminEmailSettings />
           </TabsContent>
         </Tabs>
       </div>
+
+
+      {showAdminsModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 py-10">
+          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Admin User Management
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Manage admin users and their passwords.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdminsModal(false)}
+                className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto p-6">
+              <AdminUserManagement />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
