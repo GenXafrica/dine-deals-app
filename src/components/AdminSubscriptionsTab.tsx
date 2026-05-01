@@ -109,9 +109,11 @@ export default function AdminSubscriptionsTab() {
         .from('global_settings')
         .select('promo_enabled, promo_duration_days, promo_plan_id')
         .eq('id', 1)
-        .single();
+        .maybeSingle();
 
-      if (globalSettingsError) throw globalSettingsError;
+      if (globalSettingsError) {
+        console.error('Failed to load global promo settings:', globalSettingsError);
+      }
 
       const merchantIds = (merchants || []).map((m: any) => m.id);
 
@@ -150,9 +152,13 @@ export default function AdminSubscriptionsTab() {
       setPlans(safePlans);
 
       if (globalSettings) {
-        setPromoEnabled(globalSettings.promo_enabled);
+        setPromoEnabled(!!globalSettings.promo_enabled);
         setPromoDuration(globalSettings.promo_duration_days ?? 90);
         setPromoPlanId(globalSettings.promo_plan_id ?? '');
+      } else {
+        setPromoEnabled(false);
+        setPromoDuration(90);
+        setPromoPlanId('');
       }
 
       const result: Row[] =
@@ -191,6 +197,7 @@ export default function AdminSubscriptionsTab() {
     } catch (error) {
       console.error('Failed to load admin subscriptions:', error);
       setRows([]);
+      setPromoEnabled(false);
     } finally {
       setLoading(false);
       fetchInFlightRef.current = false;
