@@ -122,7 +122,7 @@ export default function AdminUserManagement() {
       // small delay to allow DB/replication consistency before refetch
       setTimeout(() => fetchAdminUsers(), 600);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to add admin user', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to Add User', variant: 'destructive' });
       console.error('[AdminUserManagement] addAdminUser error', error);
     }
   };
@@ -254,10 +254,10 @@ export default function AdminUserManagement() {
             <DialogTrigger asChild>
               <Button
                 className="bg-[#2463EB] hover:bg-[#1E50B0] text-white w-full sm:w-auto"
-                title="Add Admin User"
+                title="Add User"
               >
                 <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Add Admin User</span>
+                <span className="hidden sm:inline">Add User</span>
               </Button>
             </DialogTrigger>
 
@@ -303,7 +303,7 @@ export default function AdminUserManagement() {
                 </div>
 
                 <Button onClick={addAdminUser} className="w-full">
-                  Add Admin User
+                  Add User
                 </Button>
               </div>
             </DialogContent>
