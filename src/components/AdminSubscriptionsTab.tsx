@@ -499,7 +499,7 @@ const updatePromoDuration = async (value: number) => {
                             row.promo_enabled ? 'bg-green-500' : 'bg-gray-300'
                           } text-white`}
                         >
-                          Extend 30d
+                          Extend
                         </Button>
                       </TableCell>
 
