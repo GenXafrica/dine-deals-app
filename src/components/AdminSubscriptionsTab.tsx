@@ -213,7 +213,20 @@ export default function AdminSubscriptionsTab() {
     }
   };
 
-  const updatePromoDuration = async (value: number) => {
+  
+  const handleExtendPromo = async (merchantId: string) => {
+    if (!merchantId) return;
+    try {
+      await supabase.rpc('admin_extend_promo_30_days', {
+        p_merchant_id: merchantId,
+      });
+      await fetchData();
+    } catch (error) {
+      console.error('Failed to extend promo:', error);
+    }
+  };
+
+const updatePromoDuration = async (value: number) => {
     const previousDuration = promoDuration;
     setPromoDuration(value);
 
@@ -397,6 +410,7 @@ export default function AdminSubscriptionsTab() {
                     <TableHead>Merchant Name</TableHead>
                     <TableHead>Plan</TableHead>
                     <TableHead>Promo Expiry</TableHead>
+                    <TableHead>Extend Promo</TableHead>
                     <TableHead>Active Deals</TableHead>
                     <TableHead>Paid Subscription</TableHead>
                     <TableHead>Actions</TableHead>
@@ -425,6 +439,18 @@ export default function AdminSubscriptionsTab() {
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}
+                      </TableCell>
+
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          onClick={() => handleExtendPromo(row.user_id)}
+                          className={`${
+                            row.promo_enabled ? 'bg-green-500' : 'bg-gray-300'
+                          } text-white`}
+                        >
+                          Extend 30d
+                        </Button>
                       </TableCell>
 
                       <TableCell>
