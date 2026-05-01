@@ -4,10 +4,11 @@ import Masthead from './Masthead'
 
 interface AdminHeaderProps {
   onDownloadCSV: () => void
+  onManageAdmins?: () => void
   onLogout?: () => void
 }
 
-export function AdminHeader({ onDownloadCSV, onLogout }: AdminHeaderProps) {
+export function AdminHeader({ onDownloadCSV, onManageAdmins, onLogout }: AdminHeaderProps) {
   const logo = (
     <div className="w-9 h-9 bg-[#1E293B] rounded-md flex items-center justify-center">
       <img
@@ -20,6 +21,17 @@ export function AdminHeader({ onDownloadCSV, onLogout }: AdminHeaderProps) {
 
   const actions = (
     <>
+      {onManageAdmins && (
+        <Button
+          onClick={onManageAdmins}
+          variant="outline"
+          size="sm"
+          className="bg-[#1E293B] text-white border border-[#334155] hover:bg-[#334155] hover:text-white"
+        >
+          Manage Admins
+        </Button>
+      )}
+
       <Button
         onClick={onDownloadCSV}
         variant="outline"

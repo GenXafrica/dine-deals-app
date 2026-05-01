@@ -280,18 +280,12 @@ export default function ModernAdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setShowAdminsModal(true)}
-          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-        >
-          Manage Admins
-        </button>
         <HomeButton onClick={handleGoHome} />
       </div>
 
       <AdminHeader
         onDownloadCSV={handleDownloadCSV}
+        onManageAdmins={() => setShowAdminsModal(true)}
         onLogout={handleLogout}
       />
 
