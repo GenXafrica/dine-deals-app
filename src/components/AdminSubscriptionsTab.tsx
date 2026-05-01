@@ -67,6 +67,54 @@ export default function AdminSubscriptionsTab() {
     ).padStart(2, '0')}/${d.getFullYear()}`;
   };
 
+  const saveGlobalPromoSettings = async ({
+    enabled,
+    planId,
+    durationDays,
+  }: {
+    enabled: boolean;
+    planId: string | null;
+    durationDays: number | null;
+  }) => {
+    const { error: rpcError } = await supabase.rpc('admin_toggle_promo', {
+      p_plan_id: enabled ? planId : null,
+      p_enabled: enabled,
+      p_duration_days: enabled ? durationDays : null,
+    });
+
+    if (rpcError) {
+      throw rpcError;
+    }
+
+    const { data: savedSettings, error: readError } = await supabase
+      .from('global_settings')
+      .select('promo_enabled, promo_duration_days, promo_plan_id')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (readError) {
+      throw readError;
+    }
+
+    if (savedSettings?.promo_enabled !== enabled) {
+      const { error: upsertError } = await supabase
+        .from('global_settings')
+        .upsert(
+          {
+            id: 1,
+            promo_enabled: enabled,
+            promo_plan_id: enabled ? planId : null,
+            promo_duration_days: enabled ? durationDays : null,
+          },
+          { onConflict: 'id' }
+        );
+
+      if (upsertError) {
+        throw upsertError;
+      }
+    }
+  };
+
   const fetchData = async () => {
     if (fetchInFlightRef.current) return;
     fetchInFlightRef.current = true;
@@ -245,15 +293,11 @@ const updatePromoDuration = async (value: number) => {
       setPromoLoading(true);
 
       try {
-        const { error } = await supabase.rpc('admin_toggle_promo', {
-          p_plan_id: promoPlanId,
-          p_enabled: true,
-          p_duration_days: value,
+        await saveGlobalPromoSettings({
+          enabled: true,
+          planId: promoPlanId,
+          durationDays: value,
         });
-
-        if (error) {
-          throw error;
-        }
 
         await fetchData();
       } catch (error) {
@@ -274,15 +318,11 @@ const updatePromoDuration = async (value: number) => {
       setPromoLoading(true);
 
       try {
-        const { error } = await supabase.rpc('admin_toggle_promo', {
-          p_plan_id: value,
-          p_enabled: true,
-          p_duration_days: promoDuration,
+        await saveGlobalPromoSettings({
+          enabled: true,
+          planId: value,
+          durationDays: promoDuration,
         });
-
-        if (error) {
-          throw error;
-        }
 
         await fetchData();
       } catch (error) {
@@ -311,15 +351,11 @@ const updatePromoDuration = async (value: number) => {
     setPromoEnabled(next);
 
     try {
-      const { error } = await supabase.rpc('admin_toggle_promo', {
-        p_plan_id: next ? promoPlanId : null,
-        p_enabled: next,
-        p_duration_days: next ? promoDuration : null,
+      await saveGlobalPromoSettings({
+        enabled: next,
+        planId: next ? promoPlanId : null,
+        durationDays: next ? promoDuration : null,
       });
-
-      if (error) {
-        throw error;
-      }
 
       await fetchData();
     } catch (error) {
