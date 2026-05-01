@@ -639,9 +639,27 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
 
               <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-                <div>
-                  <div className="font-semibold text-gray-900">Commission Payouts</div>
-                  <div className="text-sm text-gray-600">Commission amount, payout status and paid date.</div>
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-gray-900">Commission Payouts</div>
+                    <div className="text-sm text-gray-600">Commission amount, payout status and paid date.</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[minmax(180px,1fr)_auto] gap-3 md:max-w-md">
+                    <div>
+                      <Label>Commission month</Label>
+                      <Input
+                        type="date"
+                        value={commissionMonth}
+                        onChange={(e) => setCommissionMonth(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={calculateCommissions} disabled={calculatingCommission}>
+                        {calculatingCommission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                        Calculate month
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <Table>
@@ -670,26 +688,6 @@ export const AdminAgentsTab: React.FC = () => {
               </div>
             </>
           )}
-
-          <div className="rounded-lg border border-gray-200 p-4 space-y-4">
-            <div className="font-semibold text-gray-900">Commission operations</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Commission month</Label>
-                <Input
-                  type="date"
-                  value={commissionMonth}
-                  onChange={(e) => setCommissionMonth(e.target.value)}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={calculateCommissions} disabled={calculatingCommission}>
-                  {calculatingCommission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  Calculate month
-                </Button>
-              </div>
-            </div>
-          </div>
 
           <div className="rounded-lg border border-gray-200 p-4 space-y-4">
             <div className="font-semibold text-gray-900">
