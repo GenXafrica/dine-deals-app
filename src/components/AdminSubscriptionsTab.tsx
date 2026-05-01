@@ -29,6 +29,8 @@ interface PlanOption {
   id: string;
   name: string;
   slug?: string;
+  promo_enabled?: boolean;
+  promo_duration_days?: number | null;
 }
 
 interface DealCountRow {
@@ -67,54 +69,6 @@ export default function AdminSubscriptionsTab() {
     ).padStart(2, '0')}/${d.getFullYear()}`;
   };
 
-  const saveGlobalPromoSettings = async ({
-    enabled,
-    planId,
-    durationDays,
-  }: {
-    enabled: boolean;
-    planId: string | null;
-    durationDays: number | null;
-  }) => {
-    const { error: rpcError } = await supabase.rpc('admin_toggle_promo', {
-      p_plan_id: enabled ? planId : null,
-      p_enabled: enabled,
-      p_duration_days: enabled ? durationDays : null,
-    });
-
-    if (rpcError) {
-      throw rpcError;
-    }
-
-    const { data: savedSettings, error: readError } = await supabase
-      .from('global_settings')
-      .select('promo_enabled, promo_duration_days, promo_plan_id')
-      .eq('id', 1)
-      .maybeSingle();
-
-    if (readError) {
-      throw readError;
-    }
-
-    if (savedSettings?.promo_enabled !== enabled) {
-      const { error: upsertError } = await supabase
-        .from('global_settings')
-        .upsert(
-          {
-            id: 1,
-            promo_enabled: enabled,
-            promo_plan_id: enabled ? planId : null,
-            promo_duration_days: enabled ? durationDays : null,
-          },
-          { onConflict: 'id' }
-        );
-
-      if (upsertError) {
-        throw upsertError;
-      }
-    }
-  };
-
   const fetchData = async () => {
     if (fetchInFlightRef.current) return;
     fetchInFlightRef.current = true;
@@ -148,7 +102,7 @@ export default function AdminSubscriptionsTab() {
 
       const { data: planRows, error: plansError } = await supabase
         .from('subscription_plans')
-        .select('id, name, slug')
+        .select('id, name, slug, promo_enabled, promo_duration_days')
         .order('display_order', { ascending: true });
 
       if (plansError) throw plansError;
@@ -190,6 +144,8 @@ export default function AdminSubscriptionsTab() {
         id: plan.id,
         name: plan.name,
         slug: plan.slug,
+        promo_enabled: !!plan.promo_enabled,
+        promo_duration_days: plan.promo_duration_days ?? null,
       }));
 
       const planMap: Record<string, string> = {};
@@ -199,10 +155,23 @@ export default function AdminSubscriptionsTab() {
 
       setPlans(safePlans);
 
+      const activePromoPlan = safePlans.find((plan) => plan.promo_enabled);
+
       if (globalSettings) {
-        setPromoEnabled(!!globalSettings.promo_enabled);
-        setPromoDuration(globalSettings.promo_duration_days ?? 90);
-        setPromoPlanId(globalSettings.promo_plan_id ?? '');
+        const savedPromoEnabled =
+          !!globalSettings.promo_enabled || !!activePromoPlan;
+
+        setPromoEnabled(savedPromoEnabled);
+        setPromoDuration(
+          globalSettings.promo_duration_days ??
+            activePromoPlan?.promo_duration_days ??
+            90
+        );
+        setPromoPlanId(globalSettings.promo_plan_id ?? activePromoPlan?.id ?? '');
+      } else if (activePromoPlan) {
+        setPromoEnabled(true);
+        setPromoDuration(activePromoPlan.promo_duration_days ?? 90);
+        setPromoPlanId(activePromoPlan.id);
       } else {
         setPromoEnabled(false);
         setPromoDuration(90);
@@ -245,7 +214,7 @@ export default function AdminSubscriptionsTab() {
     } catch (error) {
       console.error('Failed to load admin subscriptions:', error);
       setRows([]);
-      setPromoEnabled(false);
+      setPromoEnabled((current) => (current === null ? false : current));
     } finally {
       setLoading(false);
       fetchInFlightRef.current = false;
@@ -293,17 +262,25 @@ const updatePromoDuration = async (value: number) => {
       setPromoLoading(true);
 
       try {
-        await saveGlobalPromoSettings({
-          enabled: true,
-          planId: promoPlanId,
-          durationDays: value,
+        const { error } = await supabase.rpc('admin_toggle_promo', {
+          p_plan_id: promoPlanId,
+          p_enabled: true,
+          p_duration_days: value,
         });
 
-        await fetchData();
+        if (error) {
+          throw error;
+        }
+
+        await fetchData().catch((reloadError) => {
+          console.error('Failed to reload admin subscriptions:', reloadError);
+        });
       } catch (error) {
         console.error('Failed to update promo duration:', error);
         setPromoDuration(previousDuration);
-        await fetchData();
+        await fetchData().catch((reloadError) => {
+          console.error('Failed to reload admin subscriptions:', reloadError);
+        });
       } finally {
         setPromoLoading(false);
       }
@@ -318,17 +295,25 @@ const updatePromoDuration = async (value: number) => {
       setPromoLoading(true);
 
       try {
-        await saveGlobalPromoSettings({
-          enabled: true,
-          planId: value,
-          durationDays: promoDuration,
+        const { error } = await supabase.rpc('admin_toggle_promo', {
+          p_plan_id: value,
+          p_enabled: true,
+          p_duration_days: promoDuration,
         });
 
-        await fetchData();
+        if (error) {
+          throw error;
+        }
+
+        await fetchData().catch((reloadError) => {
+          console.error('Failed to reload admin subscriptions:', reloadError);
+        });
       } catch (error) {
         console.error('Failed to update promo plan:', error);
         setPromoPlanId(previousPlanId);
-        await fetchData();
+        await fetchData().catch((reloadError) => {
+          console.error('Failed to reload admin subscriptions:', reloadError);
+        });
       } finally {
         setPromoLoading(false);
       }
@@ -351,17 +336,27 @@ const updatePromoDuration = async (value: number) => {
     setPromoEnabled(next);
 
     try {
-      await saveGlobalPromoSettings({
-        enabled: next,
-        planId: next ? promoPlanId : null,
-        durationDays: next ? promoDuration : null,
+      const { error } = await supabase.rpc('admin_toggle_promo', {
+        p_plan_id: next ? promoPlanId : null,
+        p_enabled: next,
+        p_duration_days: next ? promoDuration : null,
       });
 
-      await fetchData();
+      if (error) {
+        throw error;
+      }
+
+      setPromoEnabled(next);
+
+      await fetchData().catch((reloadError) => {
+        console.error('Failed to reload admin subscriptions:', reloadError);
+      });
     } catch (error) {
       console.error('Failed to toggle promo:', error);
       setPromoEnabled(previousEnabled);
-      await fetchData();
+      await fetchData().catch((reloadError) => {
+        console.error('Failed to reload admin subscriptions:', reloadError);
+      });
     } finally {
       setPromoLoading(false);
     }
