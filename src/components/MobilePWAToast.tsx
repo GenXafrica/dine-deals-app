@@ -7,10 +7,6 @@ export const MobilePWAToast: React.FC = () => {
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    // Do not show on desktop
-    const isDesktop = window.innerWidth > 768;
-    if (isDesktop) return;
-
     // Only show on home page
     if (window.location.pathname !== '/') return;
 
