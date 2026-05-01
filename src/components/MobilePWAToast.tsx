@@ -7,8 +7,8 @@ export const MobilePWAToast: React.FC = () => {
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    const isHomePage = window.location.pathname === '/';
-    const isDesktopView = window.matchMedia('(min-width: 768px)').matches;
+    // Only show on home page
+    if (window.location.pathname !== '/') return;
 
     // Already installed?
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -17,31 +17,14 @@ export const MobilePWAToast: React.FC = () => {
 
     if (isStandalone || isIOSStandalone) return;
 
-    const handleBeforeInstallPrompt = (e: any) => {
-      // Desktop only: suppress the browser's default blue install button.
-      if (!isDesktopView) return;
-
-      e.preventDefault();
-
-      if (!isHomePage) return;
-
-      setDeferredPrompt(e);
-      setCanInstall(true);
-    };
-
     const handler = (e: any) => {
-      // Keep existing mobile behaviour unchanged.
-      if (!isHomePage) return;
-
       setDeferredPrompt(e.detail);
       setCanInstall(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('dd-install-ready', handler);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('dd-install-ready', handler);
     };
   }, []);
