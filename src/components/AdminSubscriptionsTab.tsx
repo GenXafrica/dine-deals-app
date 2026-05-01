@@ -198,6 +198,8 @@ export default function AdminSubscriptionsTab() {
   };
 
   const handleSync = async (merchantId: string) => {
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) return;
     if (!merchantId) return;
 
     setSyncingId(merchantId);
@@ -215,6 +217,8 @@ export default function AdminSubscriptionsTab() {
 
   
   const handleExtendPromo = async (merchantId: string) => {
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) return;
     if (!merchantId) return;
     try {
       await supabase.rpc('admin_extend_promo_30_days', {
@@ -285,6 +289,8 @@ const updatePromoDuration = async (value: number) => {
   };
 
   const togglePromo = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) return;
     if (promoLoading || promoEnabled === null) return;
 
     const next = !promoEnabled;
@@ -319,7 +325,13 @@ const updatePromoDuration = async (value: number) => {
   };
 
   useEffect(() => {
-    fetchData();
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) {
+        fetchData();
+      }
+    };
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (
