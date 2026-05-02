@@ -2,8 +2,10 @@ name: Build Dine Deals
 
 on:
   workflow_dispatch:
- push:
-  branches: ["main", "Preview"]
+  push:
+    branches:
+      - main
+      - Preview
 
 jobs:
   build:
