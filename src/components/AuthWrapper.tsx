@@ -95,7 +95,7 @@ const PublicHomeScreen: React.FC<{
           </div>
 
           <div className="text-center mt-6 px-6 text-white drop-shadow-md font-medium leading-snug">
-            Find the best deals within 3, 5 or 10 km of your location.
+            PREVIEW TEST - Find the best deals within 3, 5 or 10 km of your location.
           </div>
         </div>
       </div>
