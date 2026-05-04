@@ -1,7 +1,5 @@
 name: Build Dine Deals
 
-name: Build Dine Deals
-
 "on":
   workflow_dispatch:
   push:
