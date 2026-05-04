@@ -1,11 +1,13 @@
 name: Build Dine Deals
 
-on:
+name: Build Dine Deals
+
+"on":
   workflow_dispatch:
   push:
     branches:
-  - main
-  - preview
+      - main
+      - preview
 
 jobs:
   build:
