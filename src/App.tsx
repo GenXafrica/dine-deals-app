@@ -305,6 +305,12 @@ function App(): JSX.Element {
   const lastEnsuredUser = useRef<string | null>(null);
 
   useEffect(() => {
+    if (window.location.hostname === "preview.app.dinedeals.co.za") {
+      document.title = "Dine Deals Preview";
+    }
+  }, []);
+
+  useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange(
       (event, session) => {
         broadcastAuthChange(event, session);

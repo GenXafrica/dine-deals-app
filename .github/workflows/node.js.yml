@@ -1,6 +1,6 @@
 name: Build Dine Deals
 
-on:
+"on":
   workflow_dispatch:
   push:
     branches:
