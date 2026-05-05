@@ -256,6 +256,43 @@ export default function AdminSubscriptionsTab() {
     }
   };
 
+  const getPromoButtonState = (row: Row) => {
+    const expiry = row.promo_expires_at
+      ? new Date(
+          row.promo_expires_at
+            .replace(' ', 'T')
+            .replace(/\.(\d{3})\d+/, '.$1')
+            .replace(/([+-]\d{2})$/, '$1:00')
+        )
+      : null;
+
+    const hasValidExpiry = expiry && !Number.isNaN(expiry.getTime());
+    const isExpired = !!hasValidExpiry && expiry.getTime() <= Date.now();
+    const isActive = !!row.promo_enabled && !!hasValidExpiry && !isExpired;
+
+    if (isExpired) {
+      return {
+        label: 'Expired',
+        className: 'bg-gray-300 text-white hover:bg-gray-300 disabled:opacity-100 disabled:pointer-events-none',
+        disabled: true,
+      };
+    }
+
+    if (isActive) {
+      return {
+        label: 'Active',
+        className: 'bg-green-500 text-white hover:bg-green-600',
+        disabled: false,
+      };
+    }
+
+    return {
+      label: 'Activate',
+      className: 'bg-[#2463EB] text-white hover:bg-[#1d4ed8] disabled:opacity-100 disabled:pointer-events-none',
+      disabled: true,
+    };
+  };
+
 const updatePromoDuration = async (value: number) => {
     const previousDuration = promoDuration;
     setPromoDuration(value);
@@ -470,7 +507,10 @@ const updatePromoDuration = async (value: number) => {
                 </TableHeader>
 
                 <TableBody>
-                  {rows.map((row) => (
+                  {rows.map((row) => {
+                    const promoButtonState = getPromoButtonState(row);
+
+                    return (
                     <TableRow key={row.id}>
                       <TableCell>{row.restaurant_name}</TableCell>
 
@@ -497,11 +537,10 @@ const updatePromoDuration = async (value: number) => {
                         <Button
                           size="sm"
                           onClick={() => handleExtendPromo(row.merchant_id)}
-                          className={`${
-                            row.promo_enabled ? 'bg-green-500' : 'bg-gray-300'
-                          } text-white`}
+                          disabled={promoButtonState.disabled}
+                          className={promoButtonState.className}
                         >
-                          Extend
+                          {promoButtonState.label}
                         </Button>
                       </TableCell>
 
@@ -526,7 +565,8 @@ const updatePromoDuration = async (value: number) => {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
