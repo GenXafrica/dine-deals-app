@@ -24,6 +24,7 @@ interface Row {
   active_deals_count?: number;
   promo_enabled?: boolean;
   promo_expires_at?: string | null;
+  promo_used_at?: string | null;
 }
 
 interface PlanOption {
@@ -86,7 +87,7 @@ export default function AdminSubscriptionsTab() {
     try {
       const { data: merchants, error: merchantsError } = await supabase
         .from('merchants')
-        .select('id, user_id, name, promo_enabled, promo_expires_at');
+        .select('id, user_id, name, promo_enabled, promo_expires_at, promo_used_at');
 
       if (merchantsError) throw merchantsError;
 
@@ -209,6 +210,7 @@ export default function AdminSubscriptionsTab() {
             active_deals_count: dealCountsMap[m.id] ?? 0,
             promo_enabled: !!m.promo_enabled,
             promo_expires_at: m.promo_expires_at ?? null,
+            promo_used_at: m.promo_used_at ?? null,
           };
         }) || [];
 
@@ -268,9 +270,10 @@ export default function AdminSubscriptionsTab() {
 
     const hasValidExpiry = expiry && !Number.isNaN(expiry.getTime());
     const isExpired = !!hasValidExpiry && expiry.getTime() <= Date.now();
+    const isUsedOrDisabled = !!row.promo_used_at && !row.promo_enabled;
     const isActive = !!row.promo_enabled && !!hasValidExpiry && !isExpired;
 
-    if (isExpired) {
+    if (isUsedOrDisabled || isExpired) {
       return {
         label: 'Expired',
         className: 'bg-gray-300 text-white hover:bg-gray-300 disabled:opacity-100 disabled:pointer-events-none',
