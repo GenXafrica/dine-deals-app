@@ -15,6 +15,7 @@ import {
 interface Row {
   id: string;
   user_id: string;
+  merchant_id: string;
   restaurant_name: string;
   plan_name: string;
   billing_cycle?: string;
@@ -23,6 +24,10 @@ interface Row {
   active_deals_count?: number;
   promo_enabled?: boolean;
   promo_expires_at?: string | null;
+  promo_duration_days?: number | null;
+  promo_extension_used?: boolean;
+  promo_used_at?: string | null;
+  has_active_paid_subscription?: boolean;
 }
 
 interface PlanOption {
@@ -85,7 +90,7 @@ export default function AdminSubscriptionsTab() {
     try {
       const { data: merchants, error: merchantsError } = await supabase
         .from('merchants')
-        .select('id, user_id, name, promo_enabled, promo_expires_at');
+        .select('id, user_id, name, promo_enabled, promo_expires_at, promo_duration_days, promo_extension_used, promo_used_at');
 
       if (merchantsError) throw merchantsError;
 
@@ -178,6 +183,8 @@ export default function AdminSubscriptionsTab() {
         setPromoPlanId('');
       }
 
+      const now = Date.now();
+
       const result: Row[] =
         merchants?.map((m: any) => {
           const sub = subscriptionsData
@@ -194,9 +201,24 @@ export default function AdminSubscriptionsTab() {
 
           const activePlanId = entitlement?.active_plan_id;
 
+          const paidUntilValue =
+            sub?.paid_until || sub?.expires_at || sub?.renewal_date || null;
+          const paidUntilTimestamp = paidUntilValue
+            ? new Date(paidUntilValue).getTime()
+            : null;
+          const paidUntilIsValid =
+            typeof paidUntilTimestamp === 'number' &&
+            !Number.isNaN(paidUntilTimestamp);
+          const hasActivePaidSubscription =
+            String(sub?.status || '').toLowerCase() === 'active' &&
+            (!paidUntilValue ||
+              !paidUntilIsValid ||
+              (paidUntilTimestamp !== null && paidUntilTimestamp > now));
+
           return {
             id: sub?.merchant_id || m.user_id,
             user_id: m.user_id,
+            merchant_id: m.id,
             restaurant_name: m.name || 'Unknown',
             plan_name: activePlanId
               ? planMap[activePlanId] || sub?.plan_name || 'Starter'
@@ -207,6 +229,10 @@ export default function AdminSubscriptionsTab() {
             active_deals_count: dealCountsMap[m.id] ?? 0,
             promo_enabled: !!m.promo_enabled,
             promo_expires_at: m.promo_expires_at ?? null,
+            promo_duration_days: m.promo_duration_days ?? null,
+            promo_extension_used: !!m.promo_extension_used,
+            promo_used_at: m.promo_used_at ?? null,
+            has_active_paid_subscription: hasActivePaidSubscription,
           };
         }) || [];
 
@@ -252,6 +278,52 @@ export default function AdminSubscriptionsTab() {
     } catch (error) {
       console.error('Failed to extend promo:', error);
     }
+  };
+
+  const getPromoButtonState = (row: Row) => {
+    const expiry = row.promo_expires_at
+      ? new Date(
+          row.promo_expires_at
+            .replace(' ', 'T')
+            .replace(/\.(\d{3})\d+/, '.$1')
+            .replace(/([+-]\d{2})$/, '$1:00')
+        )
+      : null;
+
+    const hasValidExpiry = expiry && !Number.isNaN(expiry.getTime());
+    const hasActivePromo =
+      !!row.promo_enabled && !!hasValidExpiry && expiry.getTime() > Date.now();
+    const hasManualPromoAccess = !!row.promo_extension_used;
+
+    if (row.has_active_paid_subscription) {
+      return {
+        label: 'Paid',
+        className: 'bg-gray-300 text-white hover:bg-gray-300 disabled:opacity-100 disabled:pointer-events-none',
+        disabled: true,
+      };
+    }
+
+    if (hasActivePromo && hasManualPromoAccess) {
+      return {
+        label: 'Active',
+        className: 'bg-green-500 text-white hover:bg-green-600 disabled:opacity-100 disabled:pointer-events-none',
+        disabled: true,
+      };
+    }
+
+    if (!hasActivePromo && hasManualPromoAccess) {
+      return {
+        label: 'Expired',
+        className: 'bg-gray-300 text-white hover:bg-gray-300 disabled:opacity-100 disabled:pointer-events-none',
+        disabled: true,
+      };
+    }
+
+    return {
+      label: 'Activate',
+      className: 'bg-[#2463EB] text-white hover:bg-[#1d4ed8]',
+      disabled: false,
+    };
   };
 
 const updatePromoDuration = async (value: number) => {
@@ -460,7 +532,7 @@ const updatePromoDuration = async (value: number) => {
                     <TableHead>Merchant Name</TableHead>
                     <TableHead>Plan</TableHead>
                     <TableHead>Promo Expiry</TableHead>
-                    <TableHead>Extend Promo</TableHead>
+                    <TableHead>Promo Access</TableHead>
                     <TableHead>Active Deals</TableHead>
                     <TableHead>Paid Subscription</TableHead>
                     <TableHead>Actions</TableHead>
@@ -468,7 +540,10 @@ const updatePromoDuration = async (value: number) => {
                 </TableHeader>
 
                 <TableBody>
-                  {rows.map((row) => (
+                  {rows.map((row) => {
+                    const promoButtonState = getPromoButtonState(row);
+
+                    return (
                     <TableRow key={row.id}>
                       <TableCell>{row.restaurant_name}</TableCell>
 
@@ -494,12 +569,11 @@ const updatePromoDuration = async (value: number) => {
                       <TableCell>
                         <Button
                           size="sm"
-                          onClick={() => handleExtendPromo(row.user_id)}
-                          className={`${
-                            row.promo_enabled ? 'bg-green-500' : 'bg-gray-300'
-                          } text-white`}
+                          onClick={() => handleExtendPromo(row.merchant_id)}
+                          disabled={promoButtonState.disabled}
+                          className={`${promoButtonState.className} h-[34px] min-w-[86px] px-0 text-xs font-semibold`}
                         >
-                          Extend
+                          {promoButtonState.label}
                         </Button>
                       </TableCell>
 
@@ -524,7 +598,8 @@ const updatePromoDuration = async (value: number) => {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
