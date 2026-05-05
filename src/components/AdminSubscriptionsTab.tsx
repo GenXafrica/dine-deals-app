@@ -571,7 +571,7 @@ const updatePromoDuration = async (value: number) => {
                           size="sm"
                           onClick={() => handleExtendPromo(row.merchant_id)}
                           disabled={promoButtonState.disabled}
-                          className={promoButtonState.className}
+                          className={`${promoButtonState.className} h-[34px] min-w-[86px] px-0 text-xs font-semibold`}
                         >
                           {promoButtonState.label}
                         </Button>
