@@ -314,8 +314,8 @@ export default function AdminSubscriptionsTab() {
     if (!hasActivePromo && hasManualPromoAccess) {
       return {
         label: 'Expired',
-        className: 'bg-gray-300 text-white hover:bg-gray-400',
-        disabled: false,
+        className: 'bg-gray-300 text-white hover:bg-gray-300 disabled:opacity-100 disabled:pointer-events-none',
+        disabled: true,
       };
     }
 
