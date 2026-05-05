@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mail, AlertCircle } from 'lucide-react';
@@ -10,15 +10,23 @@ export const EmailValidationPage: React.FC = () => {
   const [resending, setResending] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const resendLockRef = useRef(false);
 
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Load email
+  // Load email and resend cooldown
   useEffect(() => {
     const storedEmail = localStorage.getItem('pending_verification_email');
     if (storedEmail) {
       setEmail(storedEmail);
+    }
+
+    const resendAvailableAt = Number(localStorage.getItem('pending_verification_resend_available_at') || '0');
+    const secondsRemaining = Math.ceil((resendAvailableAt - Date.now()) / 1000);
+
+    if (secondsRemaining > 0) {
+      setCooldown(secondsRemaining);
     }
   }, []);
 
@@ -27,7 +35,7 @@ export const EmailValidationPage: React.FC = () => {
     if (cooldown <= 0) return;
 
     const timer = setInterval(() => {
-      setCooldown((prev) => prev - 1);
+      setCooldown((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -51,6 +59,11 @@ export const EmailValidationPage: React.FC = () => {
       return;
     }
 
+    if (resendLockRef.current) {
+      return;
+    }
+
+    resendLockRef.current = true;
     setResending(true);
 
     try {
@@ -71,9 +84,12 @@ export const EmailValidationPage: React.FC = () => {
           description: 'Verification email resent.',
         });
 
+        const resendAvailableAt = Date.now() + 20000;
+        localStorage.setItem('pending_verification_resend_available_at', String(resendAvailableAt));
         setCooldown(20); // prevents 429
       }
     } finally {
+      resendLockRef.current = false;
       setResending(false);
     }
   };
