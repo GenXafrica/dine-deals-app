@@ -15,6 +15,7 @@ import {
 interface Row {
   id: string;
   user_id: string;
+  merchant_id: string;
   restaurant_name: string;
   plan_name: string;
   billing_cycle?: string;
@@ -197,6 +198,7 @@ export default function AdminSubscriptionsTab() {
           return {
             id: sub?.merchant_id || m.user_id,
             user_id: m.user_id,
+            merchant_id: m.id,
             restaurant_name: m.name || 'Unknown',
             plan_name: activePlanId
               ? planMap[activePlanId] || sub?.plan_name || 'Starter'
@@ -494,7 +496,7 @@ const updatePromoDuration = async (value: number) => {
                       <TableCell>
                         <Button
                           size="sm"
-                          onClick={() => handleExtendPromo(row.user_id)}
+                          onClick={() => handleExtendPromo(row.merchant_id)}
                           className={`${
                             row.promo_enabled ? 'bg-green-500' : 'bg-gray-300'
                           } text-white`}
