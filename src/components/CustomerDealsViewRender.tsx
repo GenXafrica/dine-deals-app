@@ -204,7 +204,7 @@ return copy;
 
               <div
                 style={{
-                  color: "#6B7280",
+                  color: "#D97706",
                   fontSize: 14,
                   marginTop: 4,
                   lineHeight: 1.5,
