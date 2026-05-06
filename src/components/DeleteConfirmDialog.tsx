@@ -60,6 +60,13 @@ export function DeleteConfirmDialog({
     try {
       if (type === 'deal') {
         await onDelete();
+
+        toast({
+          title: 'Success',
+          description: `"${item.name}" has been deleted successfully`,
+          duration: 3000,
+        });
+
         onOpenChange(false);
 
         return;
