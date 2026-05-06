@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 export const AuthCallback = () => {
+  const hasRunRef = useRef(false);
+
   useEffect(() => {
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 

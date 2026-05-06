@@ -173,8 +173,24 @@ export const NewRegisterForm: React.FC<NewRegisterFormProps> = ({
       return;
     } catch (err) {
       console.error("Registration error:", err);
+
+      const message = err instanceof Error ? err.message : String(err || "");
+      const lowerMessage = message.toLowerCase();
+      const isTimeout =
+        message.includes("504") ||
+        lowerMessage.includes("timed out") ||
+        lowerMessage.includes("timeout") ||
+        lowerMessage.includes("failed to fetch") ||
+        lowerMessage.includes("network");
+
+      if (isTimeout) {
+        localStorage.setItem("pending_verification_email", email);
+        window.location.replace("/verify-email");
+        return;
+      }
+
       setError("Registration failed. Please try again.");
-      setLoading(false); // reset on error
+      setLoading(false); // reset on non-timeout error
       signupInProgressRef.current = false;
       clearSignupLock();
     }
