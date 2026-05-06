@@ -244,7 +244,7 @@ export const MerchantDashboardDealsRender: React.FC<RenderProps> = ({
       <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        type="merchant"
+        type="deal"
         item={
           selectedDeal
             ? { id: selectedDeal.id, name: selectedDeal.title }

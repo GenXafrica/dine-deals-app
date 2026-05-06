@@ -16,7 +16,7 @@ import { Trash2 } from 'lucide-react';
 interface DeleteConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'customer' | 'merchant';
+  type: 'customer' | 'merchant' | 'deal';
   item: { id: string; name: string; user_id?: string } | null;
   onDelete: () => void | Promise<void>;
 }
@@ -58,6 +58,19 @@ export function DeleteConfirmDialog({
     setLoading(true);
 
     try {
+      if (type === 'deal') {
+        await onDelete();
+
+        toast({
+          title: 'Success',
+          description: `"${item.name}" has been deleted successfully`,
+          duration: 3000,
+        });
+
+        onOpenChange(false);
+        return;
+      }
+
       const table = type === 'customer' ? 'customers' : 'merchants';
 
       const { data: recordData, error: fetchError } = await withTimeout(
