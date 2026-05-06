@@ -68,7 +68,6 @@ export function DeleteConfirmDialog({
         });
 
         onOpenChange(false);
-
         return;
       }
 
