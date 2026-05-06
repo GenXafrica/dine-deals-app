@@ -552,7 +552,7 @@ const updatePromoDuration = async (value: number) => {
                           <span>{row.plan_name}</span>
                           {row.promo_enabled && row.promo_expires_at ? (
                             <span className="inline-flex items-center rounded-md bg-[#2463EB] px-2 py-1 text-xs font-medium text-white">
-                              PROMO
+                              Promo
                             </span>
                           ) : null}
                         </div>
