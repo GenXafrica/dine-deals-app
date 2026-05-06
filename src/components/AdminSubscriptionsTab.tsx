@@ -534,7 +534,7 @@ const updatePromoDuration = async (value: number) => {
                     <TableHead>Promo Expiry</TableHead>
                     <TableHead>Promo Access</TableHead>
                     <TableHead>Active Deals</TableHead>
-                    <TableHead>Paid Subscription</TableHead>
+                    <TableHead>Started</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
