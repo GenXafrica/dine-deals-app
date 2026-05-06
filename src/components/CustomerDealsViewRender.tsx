@@ -201,6 +201,18 @@ return copy;
               >
                 Enable Location
               </button>
+
+              <div
+                style={{
+                  color: "#D97706",
+                  fontSize: 14,
+                  marginTop: 4,
+                  lineHeight: 1.5,
+                  textAlign: "center",
+                }}
+              >
+                Your area is in our launch rollout. Restaurants and deals are frequently added. 😁
+              </div>
             </div>
           </div>
 
