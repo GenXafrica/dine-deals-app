@@ -37,7 +37,7 @@ import { Trash2, Mail } from 'lucide-react';
 type UnifiedUser = {
   id: string;
   db_id: string;
-  type: 'customer' | 'merchant' | 'unassigned';
+  type: 'customer' | 'merchant' | 'agent' | 'unassigned';
   name: string;
   email: string;
   created_at?: string;
@@ -143,6 +143,7 @@ export default function AdminUserTable({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UnifiedUser | null>(null);
   const [welcomeStatusByEmail, setWelcomeStatusByEmail] = useState<Record<string, boolean>>({});
+  const [agents, setAgents] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -182,6 +183,17 @@ export default function AdminUserTable({
   }, []);
 
   const combined = useMemo(() => {
+    const agentsByUserId = new Map<string, any>();
+    const agentsByEmail = new Map<string, any>();
+
+    agents.forEach((agent) => {
+      const userId = agent?.user_id || agent?.raw?.user_id || '';
+      const email = formatDisplayEmail(agent?.email_address || agent?.email || agent?.raw?.email_address || agent?.raw?.email || '');
+
+      if (userId) agentsByUserId.set(userId, agent);
+      if (email) agentsByEmail.set(email, agent);
+    });
+
     const mappedCustomers =
       customers?.map((c) => {
         const email = c.email || c.raw?.email || '';
@@ -220,11 +232,30 @@ export default function AdminUserTable({
 
     const mappedUnassigned =
       unassigned?.map((u) => {
+        const id = u.user_id || u.id || u.raw?.user_id || u.raw?.id;
         const email = u.email || u.raw?.email || '';
         const emailKey = formatDisplayEmail(email);
+        const matchedAgent = agentsByUserId.get(id) || agentsByEmail.get(emailKey);
+
+        if (matchedAgent) {
+          const firstName = matchedAgent.first_name || matchedAgent.raw?.first_name || '';
+          const lastName = matchedAgent.last_name || matchedAgent.raw?.last_name || '';
+
+          return {
+            id,
+            db_id: matchedAgent.id || matchedAgent.raw?.id || id,
+            type: 'agent' as const,
+            name: `${firstName} ${lastName}`.trim(),
+            email,
+            created_at: u.created_at || u.raw?.created_at || matchedAgent.created_at || matchedAgent.raw?.created_at,
+            verified: !!(u.email_verified || u.verified || u.raw?.email_confirmed_at),
+            welcomeEmailSent: false,
+            raw: { ...u, agent: matchedAgent },
+          };
+        }
 
         return {
-          id: u.user_id || u.id || u.raw?.user_id || u.raw?.id,
+          id,
           db_id: u.id || u.raw?.id || u.user_id,
           type: 'unassigned' as const,
           name: '',
@@ -237,7 +268,31 @@ export default function AdminUserTable({
       }) || [];
 
     return [...mappedCustomers, ...mappedMerchants, ...mappedUnassigned];
-  }, [customers, merchants, unassigned, welcomeStatusByEmail]);
+  }, [customers, merchants, unassigned, welcomeStatusByEmail, agents]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAgents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('agents')
+          .select('id, user_id, first_name, last_name, email_address, status, created_at');
+
+        if (error || !isMounted) return;
+
+        setAgents(data || []);
+      } catch {
+        // Keep existing user data if agent lookup is unavailable.
+      }
+    };
+
+    fetchAgents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     setAllUsers(combined);
