@@ -782,22 +782,21 @@ export const AdminAgentsTab: React.FC = () => {
                   <option value="inactive">inactive</option>
                 </select>
               </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={saveAgent} disabled={savingAgent || generatingAgentCode}>
-                {savingAgent ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                {form.id ? 'Update agent' : 'Save agent'}
-              </Button>
-              {form.id ? (
-                <Button variant="outline" onClick={resetForm} disabled={savingAgent}>
-                  Cancel
+              <div className="flex items-end justify-end gap-2 md:col-start-3">
+                <Button onClick={saveAgent} disabled={savingAgent || generatingAgentCode}>
+                  {savingAgent ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {form.id ? 'Update agent' : 'Save agent'}
                 </Button>
-              ) : null}
+                {form.id ? (
+                  <Button variant="outline" onClick={resetForm} disabled={savingAgent}>
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
 
