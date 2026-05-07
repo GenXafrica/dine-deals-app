@@ -36,38 +36,39 @@ export default function CustomerDealsViewRender(props: {
   onNavigate?: (path: string) => void;
   setRadiusKm?: (radius: number) => void;
 }) {
-
   const { deals, loading, radiusKm = 5, onNavigate } = props;
 
-const rows = useMemo(() => {
-  let list: Deal[] = [];
+  const rows = useMemo(() => {
+    let list: Deal[] = [];
 
-  if (!deals) list = [];
-  else if (Array.isArray(deals)) list = deals as Deal[];
-  else if (deals?.sample && Array.isArray(deals.sample)) list = deals.sample as Deal[];
-  else if (deals?.rows && Array.isArray(deals.rows)) list = deals.rows as Deal[];
-  else if (deals?.data && Array.isArray(deals.data)) list = deals.data as Deal[];
-  else list = [];
+    if (!deals) list = [];
+    else if (Array.isArray(deals)) list = deals as Deal[];
+    else if (deals?.sample && Array.isArray(deals.sample))
+      list = deals.sample as Deal[];
+    else if (deals?.rows && Array.isArray(deals.rows))
+      list = deals.rows as Deal[];
+    else if (deals?.data && Array.isArray(deals.data))
+      list = deals.data as Deal[];
+    else list = [];
 
-  if (typeof window === "undefined") return list;
+    if (typeof window === "undefined") return list;
 
-  const hash = window.location.hash;
+    const hash = window.location.hash;
 
-  if (!hash || !hash.startsWith("#deal-")) return list;
+    if (!hash || !hash.startsWith("#deal-")) return list;
 
-  const dealId = hash.replace("#deal-", "");
+    const dealId = hash.replace("#deal-", "");
 
-  const index = list.findIndex((r) => r.id === dealId);
+    const index = list.findIndex((r) => r.id === dealId);
 
-  if (index <= 0) return list;
+    if (index <= 0) return list;
 
-  const copy = [...list];
-  const [deal] = copy.splice(index, 1);
-  copy.unshift(deal);
+    const copy = [...list];
+    const [deal] = copy.splice(index, 1);
+    copy.unshift(deal);
 
-return copy;
-
-}, [deals, typeof window !== "undefined" ? window.location.hash : null]);
+    return copy;
+  }, [deals, typeof window !== "undefined" ? window.location.hash : null]);
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
@@ -153,9 +154,15 @@ return copy;
   };
 
   return (
-    <div style={{ width: "100%", overflowX: "hidden", overflowY: "auto", paddingBottom: "8px" }}>
-
-
+    <div
+      style={{
+        width: "100%",
+        overflowX: "hidden",
+        overflowY: "visible",
+        paddingBottom: "calc(48px + env(safe-area-inset-bottom))",
+        boxSizing: "border-box",
+      }}
+    >
       {!loading && rows.length === 0 && (
         <div
           style={{
@@ -166,7 +173,14 @@ return copy;
             boxSizing: "border-box",
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 18 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 16,
+              marginBottom: 18,
+            }}
+          >
             <img
               src="https://cexezutizzchdpsspghx.supabase.co/storage/v1/object/public/assets/map-pin.jpg"
               alt="No deals nearby"
@@ -180,10 +194,13 @@ return copy;
 
               <button
                 onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.geolocation) {
+                  if (
+                    typeof navigator !== "undefined" &&
+                    navigator.geolocation
+                  ) {
                     navigator.geolocation.getCurrentPosition(
                       () => window.location.reload(),
-                      () => setLocationDenied(true)
+                      () => setLocationDenied(true),
                     );
                   }
                 }}
@@ -211,7 +228,8 @@ return copy;
                   textAlign: "center",
                 }}
               >
-                Your area is in our launch rollout. Restaurants and deals are frequently added. 😁
+                Your area is in our launch rollout. Restaurants and deals are
+                frequently added. 😁
               </div>
             </div>
           </div>
@@ -271,20 +289,26 @@ return copy;
             flexDirection: "column",
             gap: 8,
             paddingTop: 6,
-            paddingBottom: 4,
+            paddingBottom: "8px",
             boxSizing: "border-box",
           }}
         >
           {rows.map((d) => {
-
             let merchantSrc: any = d.merchants;
 
-            if (merchantSrc == null || (Array.isArray(merchantSrc) && merchantSrc.length === 0)) {
+            if (
+              merchantSrc == null ||
+              (Array.isArray(merchantSrc) && merchantSrc.length === 0)
+            ) {
               merchantSrc = (d as any).merchant ?? null;
             }
 
             if (typeof merchantSrc === "string") {
-              try { merchantSrc = JSON.parse(merchantSrc); } catch { merchantSrc = null; }
+              try {
+                merchantSrc = JSON.parse(merchantSrc);
+              } catch {
+                merchantSrc = null;
+              }
             }
 
             const merchants = normalizeMerchants(merchantSrc);
@@ -296,14 +320,14 @@ return copy;
               merchants,
             };
 
-      
-
             return (
               <div key={d.id} style={{ width: "100%", display: "block" }}>
                 <DealCard
                   deal={dealForCard}
                   onImageClick={() =>
-                    handleImageClick(image ? { url: image, alt: d.title || "" } : null)
+                    handleImageClick(
+                      image ? { url: image, alt: d.title || "" } : null,
+                    )
                   }
                   onNavigate={() => handleNavigate(`/deal/${d.id}`)}
                   toggleExpand={() => toggleDealExpansion(d.id)}
@@ -316,34 +340,41 @@ return copy;
         </div>
       )}
 
-      {expandedDeal && expandedDealObj && (() => {
+      {expandedDeal &&
+        expandedDealObj &&
+        (() => {
+          let expMerchantSrc: any = expandedDealObj.merchants;
 
-        let expMerchantSrc: any = expandedDealObj.merchants;
+          if (
+            expMerchantSrc == null ||
+            (Array.isArray(expMerchantSrc) && expMerchantSrc.length === 0)
+          ) {
+            expMerchantSrc = (expandedDealObj as any).merchant ?? null;
+          }
 
-        if (expMerchantSrc == null || (Array.isArray(expMerchantSrc) && expMerchantSrc.length === 0)) {
-          expMerchantSrc = (expandedDealObj as any).merchant ?? null;
-        }
+          if (typeof expMerchantSrc === "string") {
+            try {
+              expMerchantSrc = JSON.parse(expMerchantSrc);
+            } catch {
+              expMerchantSrc = null;
+            }
+          }
 
-        if (typeof expMerchantSrc === "string") {
-          try { expMerchantSrc = JSON.parse(expMerchantSrc); } catch { expMerchantSrc = null; }
-        }
+          const expMerchants = normalizeMerchants(expMerchantSrc);
 
-        const expMerchants = normalizeMerchants(expMerchantSrc);
-
-        return (
-          <ExpandedDealView
-            deal={{
-              ...expandedDealObj,
-              merchants: expMerchants,
-            }}
-            onClose={() => setExpandedDeal(null)}
-            onImageClick={(img) => handleImageClick(img)}
-            onPhoneCall={(p) => handlePhoneCall(p)}
-            onNavigate={onNavigate}
-          />
-        );
-      })()}
-
+          return (
+            <ExpandedDealView
+              deal={{
+                ...expandedDealObj,
+                merchants: expMerchants,
+              }}
+              onClose={() => setExpandedDeal(null)}
+              onImageClick={(img) => handleImageClick(img)}
+              onPhoneCall={(p) => handlePhoneCall(p)}
+              onNavigate={onNavigate}
+            />
+          );
+        })()}
     </div>
   );
 }
