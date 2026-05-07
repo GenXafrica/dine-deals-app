@@ -26,7 +26,7 @@ export function AdminHeader({ onDownloadCSV, onManageAdmins, onLogout }: AdminHe
           onClick={onManageAdmins}
           variant="outline"
           size="sm"
-          className="bg-[#1E293B] text-white border border-[#334155] hover:bg-[#334155] hover:text-white"
+          className="hidden sm:inline-flex bg-[#1E293B] text-white border border-[#334155] hover:bg-[#334155] hover:text-white"
         >
           Manage Admins
         </Button>
@@ -36,7 +36,7 @@ export function AdminHeader({ onDownloadCSV, onManageAdmins, onLogout }: AdminHe
         onClick={onDownloadCSV}
         variant="outline"
         size="sm"
-        className="bg-[#1E293B] text-white border border-[#334155] hover:bg-[#334155] hover:text-white"
+        className="hidden sm:inline-flex bg-[#1E293B] text-white border border-[#334155] hover:bg-[#334155] hover:text-white"
       >
         Export CSV
       </Button>
