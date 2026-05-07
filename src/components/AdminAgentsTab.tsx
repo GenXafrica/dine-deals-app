@@ -803,21 +803,63 @@ export const AdminAgentsTab: React.FC = () => {
 
           {!loading ? (
             <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
                 <div>
                   <div className="font-semibold text-gray-900">Merchant Assignments</div>
                   <div className="text-sm text-gray-600">Merchant plan, subscription status and agent assignment lock details.</div>
                 </div>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Merchant</TableHead>
-                        <TableHead>Province</TableHead>
-                        <TableHead>Assigned Agent</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Subscription Status</TableHead>
-                        <TableHead>Assigned Date</TableHead>
-                        <TableHead>Assignment Locked</TableHead>
+
+                <div className="grid grid-cols-1 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto] gap-3 xl:max-w-2xl">
+                  <div>
+                    <Label>Unlocked merchant</Label>
+                    <select
+                      value={selectedMerchantId}
+                      onChange={(e) => setSelectedMerchantId(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="">Select merchant</option>
+                      {unlockedMerchants.map((merchant) => (
+                        <option key={merchant.id} value={merchant.id}>
+                          {merchant.name || merchant.email || merchant.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Agent</Label>
+                    <select
+                      value={selectedAgentId}
+                      onChange={(e) => setSelectedAgentId(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="">Select agent</option>
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {getAgentName(agent)} - {agent.agent_code || 'No code'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={assignMerchant} disabled={assigningMerchant}>
+                      {assigningMerchant ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Assign merchant
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Merchant</TableHead>
+                      <TableHead>Province</TableHead>
+                      <TableHead>Assigned Agent</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Subscription Status</TableHead>
+                      <TableHead>Assigned Date</TableHead>
+                      <TableHead>Assignment Locked</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -832,53 +874,12 @@ export const AdminAgentsTab: React.FC = () => {
                         <TableCell>{merchant.agent_assignment_locked ? 'Yes' : 'No'}</TableCell>
                       </TableRow>
                     ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : null}
-
-          <div className="rounded-lg border border-gray-200 p-4 space-y-4">
-            <div className="font-semibold text-gray-900">Manual merchant assignment</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Unlocked merchant</Label>
-                <select
-                  value={selectedMerchantId}
-                  onChange={(e) => setSelectedMerchantId(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="">Select merchant</option>
-                  {unlockedMerchants.map((merchant) => (
-                    <option key={merchant.id} value={merchant.id}>
-                      {merchant.name || merchant.email || merchant.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label>Agent</Label>
-                <select
-                  value={selectedAgentId}
-                  onChange={(e) => setSelectedAgentId(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="">Select agent</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {getAgentName(agent)} - {agent.agent_code || 'No code'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <Button onClick={assignMerchant} disabled={assigningMerchant}>
-                  {assigningMerchant ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  Assign merchant
-                </Button>
-              </div>
-            </div>
-          </div>        </CardContent>
+        </CardContent>
       </Card>
     </div>
   );
